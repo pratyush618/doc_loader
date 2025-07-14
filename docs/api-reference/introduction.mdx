@@ -1,0 +1,393 @@
+---
+title: API Reference
+description: 'Complete API documentation for the Document Converter'
+---
+
+## Overview
+
+The Document Converter API provides RESTful endpoints for uploading, converting, and retrieving documents. All endpoints return JSON responses and use standard HTTP status codes.
+
+<Info>
+  **Base URL**: `http://localhost:8000/api/v1`
+  
+  **Content-Type**: `application/json` for responses, `multipart/form-data` for file uploads
+</Info>
+
+## Authentication
+
+<Warning>
+  The current version does not require authentication. For production deployments, implement authentication middleware.
+</Warning>
+
+## Jobs API
+
+### Create Job
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@document.pdf" \
+  -F "output_format=md" \
+  -F "webhook_url=https://your-site.com/webhook"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/api/v1/jobs",
+    files={"file": open("document.pdf", "rb")},
+    data={
+        "output_format": "md",
+        "webhook_url": "https://your-site.com/webhook"
+    }
+)
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('output_format', 'md');
+formData.append('webhook_url', 'https://your-site.com/webhook');
+
+const response = await fetch('/api/v1/jobs', {
+  method: 'POST',
+  body: formData
+});
+```
+
+</CodeGroup>
+
+**Request Parameters:**
+
+<ParamField body="file" type="file" required>
+  The document file to convert. See [supported formats](/features/conversion#supported-formats).
+</ParamField>
+
+<ParamField body="output_format" type="string" required>
+  Output format: `md` for Markdown or `json` for structured JSON.
+</ParamField>
+
+<ParamField body="webhook_url" type="string">
+  URL to receive job completion notifications.
+</ParamField>
+
+<ParamField body="use_ocr" type="boolean" default="false">
+  Enable OCR processing for images and scanned documents.
+</ParamField>
+
+<ParamField body="ocr_provider" type="string" default="paddle">
+  OCR provider: `paddle`, `easyocr`, or `mistral`.
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "pending",
+  "progress": 0,
+  "file_name": "document.pdf",
+  "output_format": "md",
+  "use_ocr": false,
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### Get Job Status
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000"
+)
+job = response.json()
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000');
+const job = await response.json();
+```
+
+</CodeGroup>
+
+**Response:**
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "progress": 100,
+  "file_name": "document.pdf",
+  "output_format": "md",
+  "use_ocr": false,
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:05:00Z",
+  "completed_at": "2024-01-15T10:05:00Z"
+}
+```
+
+### Download Result
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result" \
+  -o converted_document.md
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result"
+)
+
+with open("converted_document.md", "wb") as f:
+    f.write(response.content)
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result');
+const blob = await response.blob();
+
+const url = window.URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'converted_document.md';
+a.click();
+```
+
+</CodeGroup>
+
+## Health API
+
+### Health Check
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/health"
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8000/api/v1/health")
+health = response.json()
+```
+
+</CodeGroup>
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "version": "1.0.0"
+}
+```
+
+### Readiness Check
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/ready"
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8000/api/v1/ready")
+readiness = response.json()
+```
+
+</CodeGroup>
+
+**Response:**
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "services": {
+    "redis": true,
+    "celery": true
+  }
+}
+```
+
+## File Download Behavior
+
+When downloading converted files via the `/api/v1/jobs/{job_id}/result` endpoint, the filename is automatically generated based on the original filename and output format:
+
+### Filename Generation Rules
+
+<Steps>
+  <Step title="Original extension is removed">
+    The file extension from the uploaded file is stripped
+  </Step>
+  <Step title="New extension is added">
+    The appropriate extension for the output format is added
+  </Step>
+  <Step title="Base name is preserved">
+    The original filename (without extension) is kept intact
+  </Step>
+</Steps>
+
+### Examples
+
+| Original Filename | Output Format | Download Filename |
+|------------------|---------------|------------------|
+| `document.pdf` | `md` | `document.md` |
+| `presentation.pptx` | `md` | `presentation.md` |
+| `spreadsheet.xlsx` | `json` | `spreadsheet.json` |
+| `My Report (v2).docx` | `md` | `My Report (v2).md` |
+| `data-2024.csv` | `json` | `data-2024.json` |
+
+### Supported Output Formats
+
+<CardGroup cols={2}>
+  <Card title="Markdown (.md)" icon="markdown">
+    Human-readable markdown with embedded images as base64
+  </Card>
+  <Card title="JSON (.json)" icon="code">
+    Structured data with content, metadata, and base64-encoded images
+  </Card>
+</CardGroup>
+
+### Response Headers
+
+The download response includes appropriate headers:
+
+- **Content-Type**: 
+  - `text/markdown` for `.md` files
+  - `application/json` for `.json` files
+- **Content-Disposition**: `attachment; filename="generated_filename"`
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request">
+    The request was invalid or cannot be served.
+    
+    ```json
+    {
+      "detail": "Job is not completed yet"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="404 Not Found">
+    The requested resource was not found.
+    
+    ```json
+    {
+      "detail": "Job not found"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="413 Request Entity Too Large">
+    The uploaded file exceeds the maximum size limit.
+    
+    ```json
+    {
+      "detail": "File too large. Maximum size is 100MB"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="422 Unprocessable Entity">
+    The request was well-formed but contains semantic errors.
+    
+    ```json
+    {
+      "detail": [
+        {
+          "loc": ["body", "output_format"],
+          "msg": "Invalid output format",
+          "type": "value_error"
+        }
+      ]
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="500 Internal Server Error">
+    An unexpected error occurred on the server.
+    
+    ```json
+    {
+      "detail": "Internal server error"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Rate Limiting
+
+<Warning>
+  Rate limiting is not implemented in the current version. For production deployments, implement rate limiting middleware.
+</Warning>
+
+## Webhook Notifications
+
+When a job completes (successfully or with failure), a webhook notification is sent to the specified URL:
+
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "progress": 100,
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:05:00Z",
+  "completed_at": "2024-01-15T10:05:00Z",
+  "result_url": "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result",
+  "metadata": {}
+}
+```
+
+## Example Workflow
+
+Here's a complete example of converting a document:
+
+<Steps>
+  <Step title="Upload Document">
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/jobs" \
+      -F "file=@presentation.pptx" \
+      -F "output_format=md"
+    ```
+    
+    Response: `{"id": "job_123", "status": "pending", ...}`
+  </Step>
+  
+  <Step title="Check Status">
+    ```bash
+    curl "http://localhost:8000/api/v1/jobs/job_123"
+    ```
+    
+    Response: `{"status": "processing", "progress": 50, ...}`
+  </Step>
+  
+  <Step title="Download Result">
+    ```bash
+    curl "http://localhost:8000/api/v1/jobs/job_123/result" -o presentation.md
+    ```
+    
+    The converted document is saved as `presentation.md`
+  </Step>
+</Steps>

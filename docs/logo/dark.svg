@@ -1,0 +1,9 @@
+<svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="32" height="32" rx="6" fill="#07C983"/>
+<path d="M6 8H26V10H6V8Z" fill="white"/>
+<path d="M6 12H22V14H6V12Z" fill="white"/>
+<path d="M6 16H24V18H6V16Z" fill="white"/>
+<path d="M6 20H20V22H6V20Z" fill="white"/>
+<circle cx="26" cy="6" r="2" fill="#0D9373"/>
+<text x="40" y="20" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">Document Converter</text>
+</svg>

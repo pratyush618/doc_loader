@@ -1,0 +1,560 @@
+---
+title: Jobs API
+description: 'Document conversion job management endpoints'
+---
+
+## Overview
+
+The Jobs API handles document conversion requests, allowing you to upload files, track conversion progress, and download results.
+
+## Create Job
+
+<api-endpoint method="POST" path="/api/v1/jobs">
+  Upload a document file for conversion.
+</api-endpoint>
+
+### Request
+
+**Content-Type:** `multipart/form-data`
+
+<ParamField body="file" type="file" required>
+  The document file to convert. Must be less than 100MB.
+</ParamField>
+
+<ParamField body="output_format" type="string" required>
+  Output format for the converted document.
+  
+  **Options:**
+  - `md` - Markdown format
+  - `json` - Structured JSON format
+</ParamField>
+
+<ParamField body="webhook_url" type="string">
+  URL to receive job completion notifications.
+  
+  **Format:** Must be a valid HTTP/HTTPS URL
+</ParamField>
+
+<ParamField body="use_ocr" type="boolean" default="false">
+  Enable OCR processing for images and scanned documents.
+</ParamField>
+
+<ParamField body="ocr_provider" type="string" default="paddle">
+  OCR provider to use when `use_ocr` is enabled.
+  
+  **Options:**
+  - `paddle` - PaddleOCR (recommended)
+  - `easyocr` - EasyOCR
+  - `mistral` - Mistral AI (requires API key)
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string" required>
+  Unique job identifier
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current job status
+  
+  **Values:** `pending`, `processing`, `completed`, `failed`
+</ResponseField>
+
+<ResponseField name="progress" type="integer" required>
+  Job progress percentage (0-100)
+</ResponseField>
+
+<ResponseField name="file_name" type="string" required>
+  Original filename
+</ResponseField>
+
+<ResponseField name="output_format" type="string" required>
+  Requested output format
+</ResponseField>
+
+<ResponseField name="use_ocr" type="boolean" required>
+  Whether OCR is enabled
+</ResponseField>
+
+<ResponseField name="ocr_provider" type="string">
+  OCR provider used (when OCR is enabled)
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Job creation timestamp (ISO 8601)
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp (ISO 8601)
+</ResponseField>
+
+<ResponseField name="webhook_url" type="string">
+  Webhook URL for notifications
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -F "file=@document.pdf" \
+  -F "output_format=md" \
+  -F "webhook_url=https://your-site.com/webhook"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/api/v1/jobs",
+    files={"file": open("document.pdf", "rb")},
+    data={
+        "output_format": "md",
+        "webhook_url": "https://your-site.com/webhook"
+    }
+)
+
+job = response.json()
+print(f"Job ID: {job['id']}")
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('output_format', 'md');
+formData.append('webhook_url', 'https://your-site.com/webhook');
+
+const response = await fetch('/api/v1/jobs', {
+  method: 'POST',
+  body: formData
+});
+
+const job = await response.json();
+console.log('Job ID:', job.id);
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "pending",
+  "progress": 0,
+  "file_name": "document.pdf",
+  "output_format": "md",
+  "use_ocr": false,
+  "ocr_provider": "paddle",
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:00:00Z",
+  "webhook_url": "https://your-site.com/webhook"
+}
+```
+
+## Get Job Status
+
+<api-endpoint method="GET" path="/api/v1/jobs/{job_id}">
+  Retrieve the current status and details of a conversion job.
+</api-endpoint>
+
+### Request
+
+<ParamField path="job_id" type="string" required>
+  The unique identifier of the job
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string" required>
+  Job identifier
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current job status
+  
+  **Values:**
+  - `pending` - Job queued for processing
+  - `processing` - Currently being converted
+  - `completed` - Conversion finished successfully
+  - `failed` - Conversion failed
+</ResponseField>
+
+<ResponseField name="progress" type="integer" required>
+  Completion percentage (0-100)
+</ResponseField>
+
+<ResponseField name="file_name" type="string" required>
+  Original filename
+</ResponseField>
+
+<ResponseField name="output_format" type="string" required>
+  Output format
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Job creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp
+</ResponseField>
+
+<ResponseField name="completed_at" type="string">
+  Completion timestamp (only when status is `completed` or `failed`)
+</ResponseField>
+
+<ResponseField name="error_message" type="string">
+  Error details (only when status is `failed`)
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Additional job metadata
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000"
+)
+
+job = response.json()
+print(f"Status: {job['status']}, Progress: {job['progress']}%")
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000');
+const job = await response.json();
+
+console.log(`Status: ${job.status}, Progress: ${job.progress}%`);
+```
+
+</CodeGroup>
+
+### Response Examples
+
+<Tabs>
+  <Tab title="Pending">
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "status": "pending",
+      "progress": 0,
+      "file_name": "document.pdf",
+      "output_format": "md",
+      "use_ocr": false,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Processing">
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "status": "processing",
+      "progress": 45,
+      "file_name": "document.pdf",
+      "output_format": "md",
+      "use_ocr": false,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:02:30Z"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Completed">
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "status": "completed",
+      "progress": 100,
+      "file_name": "document.pdf",
+      "output_format": "md",
+      "use_ocr": false,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:05:00Z",
+      "completed_at": "2024-01-15T10:05:00Z",
+      "metadata": {
+        "processing_time": 5.2,
+        "pages_processed": 10,
+        "file_size": 1024000
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Failed">
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "status": "failed",
+      "progress": 0,
+      "file_name": "document.pdf",
+      "output_format": "md",
+      "use_ocr": false,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:02:00Z",
+      "completed_at": "2024-01-15T10:02:00Z",
+      "error_message": "Unsupported file format or corrupted file"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Download Result
+
+<api-endpoint method="GET" path="/api/v1/jobs/{job_id}/result">
+  Download the converted document result.
+</api-endpoint>
+
+### Request
+
+<ParamField path="job_id" type="string" required>
+  The unique identifier of the completed job
+</ParamField>
+
+### Response
+
+The response is the converted document file with appropriate headers:
+
+<ResponseField name="Content-Type" type="header">
+  MIME type based on output format
+  
+  **Values:**
+  - `text/markdown; charset=utf-8` for Markdown
+  - `application/json; charset=utf-8` for JSON
+</ResponseField>
+
+<ResponseField name="Content-Disposition" type="header">
+  Filename for download
+  
+  **Format:** `attachment; filename="document.md"`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result" \
+  -o converted_document.md
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result"
+)
+
+if response.status_code == 200:
+    with open("converted_document.md", "w", encoding="utf-8") as f:
+        f.write(response.text)
+    print("Document downloaded successfully")
+else:
+    print(f"Error: {response.status_code}")
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result');
+
+if (response.ok) {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'converted_document.md';
+    a.click();
+    
+    window.URL.revokeObjectURL(url);
+} else {
+    console.error('Download failed:', response.status);
+}
+```
+
+</CodeGroup>
+
+### Error Responses
+
+<ResponseField name="400" type="error">
+  **Bad Request** - Job is not completed yet
+  
+  ```json
+  {
+    "detail": "Job is not completed yet"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  **Not Found** - Job doesn't exist or result file is missing
+  
+  ```json
+  {
+    "detail": "Job not found"
+  }
+  ```
+</ResponseField>
+
+## Job Status States
+
+<Steps>
+  <Step title="pending">
+    Job has been created and queued for processing
+  </Step>
+  <Step title="processing">
+    Document is currently being converted
+  </Step>
+  <Step title="completed">
+    Conversion finished successfully, result is available
+  </Step>
+  <Step title="failed">
+    Conversion failed, check error_message for details
+  </Step>
+</Steps>
+
+## Polling for Completion
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    import requests
+    import time
+
+    def wait_for_completion(job_id, timeout=300):
+        """Wait for job completion with timeout"""
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            response = requests.get(f"http://localhost:8000/api/v1/jobs/{job_id}")
+            job = response.json()
+            
+            if job['status'] == 'completed':
+                return job
+            elif job['status'] == 'failed':
+                raise Exception(f"Job failed: {job.get('error_message', 'Unknown error')}")
+            
+            print(f"Progress: {job['progress']}%")
+            time.sleep(2)
+        
+        raise TimeoutError(f"Job {job_id} did not complete within {timeout} seconds")
+
+    # Usage
+    job_id = "123e4567-e89b-12d3-a456-426614174000"
+    completed_job = wait_for_completion(job_id)
+    print(f"Job completed: {completed_job['id']}")
+    ```
+  </Tab>
+  
+  <Tab title="JavaScript">
+    ```javascript
+    async function waitForCompletion(jobId, timeout = 300000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < timeout) {
+            const response = await fetch(`/api/v1/jobs/${jobId}`);
+            const job = await response.json();
+            
+            if (job.status === 'completed') {
+                return job;
+            } else if (job.status === 'failed') {
+                throw new Error(`Job failed: ${job.error_message || 'Unknown error'}`);
+            }
+            
+            console.log(`Progress: ${job.progress}%`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        throw new Error(`Job ${jobId} did not complete within ${timeout}ms`);
+    }
+
+    // Usage
+    const jobId = "123e4567-e89b-12d3-a456-426614174000";
+    try {
+        const completedJob = await waitForCompletion(jobId);
+        console.log('Job completed:', completedJob.id);
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Rate Limiting
+
+<Warning>
+  Rate limiting is not implemented in the current version. For production deployments, implement appropriate rate limiting middleware.
+</Warning>
+
+## File Size Limits
+
+<Info>
+  **Default limit:** 100MB per file
+  
+  **Configuration:** Set `MAX_FILE_SIZE` environment variable (in bytes)
+</Info>
+
+Files exceeding the limit will return a `413 Request Entity Too Large` error.
+
+## Supported File Types
+
+<CardGroup cols={3}>
+  <Card title="Documents" icon="file-text">
+    PDF, DOCX, RTF, TXT, MD
+  </Card>
+  <Card title="Presentations" icon="presentation">
+    PPTX, PPTM, POTX, POTM
+  </Card>
+  <Card title="Spreadsheets" icon="table">
+    XLSX, XLSM, XLS, CSV
+  </Card>
+  <Card title="Images" icon="image">
+    PNG, JPG, GIF, BMP, WebP, TIFF
+  </Card>
+  <Card title="Web" icon="globe">
+    HTML, XML
+  </Card>
+  <Card title="Data" icon="database">
+    JSON, CSV
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Health API"
+    icon="heart"
+    href="/api-reference/health"
+  >
+    Check API health and readiness
+  </Card>
+  <Card
+    title="Error Handling"
+    icon="warning"
+    href="/api-reference/errors"
+  >
+    Handle API errors properly
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="webhook"
+    href="/features/webhooks"
+  >
+    Set up real-time notifications
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="/examples/basic-conversion"
+  >
+    See complete integration examples
+  </Card>
+</CardGroup>

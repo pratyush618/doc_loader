@@ -1,0 +1,465 @@
+---
+title: "Deployment Guide"
+description: "Deploy the Document Converter API documentation using Mintlify"
+---
+
+# Documentation Deployment Guide
+
+This guide covers how to deploy the Document Converter API documentation using Mintlify.
+
+## Quick Deployment (Recommended)
+
+### 1. Mintlify Cloud
+
+<Info>
+The easiest way to deploy is using Mintlify's cloud platform
+</Info>
+
+<Steps>
+<Step title="Sign up">
+Sign up at [Mintlify](https://mintlify.com)
+</Step>
+<Step title="Connect GitHub">
+Connect your GitHub repository
+</Step>
+<Step title="Configure settings">
+- Repository: `your-username/doc-converter`
+- Docs path: `/docs`
+- Branch: `main`
+</Step>
+<Step title="Deploy">
+Deploy automatically on push
+</Step>
+</Steps>
+
+### 2. Local Testing
+
+Before deploying, test locally:
+
+<CodeGroup>
+```bash Install dependencies
+npm install
+```
+
+```bash Start development server
+npm run dev
+```
+
+```bash Build for production
+npm run build
+```
+</CodeGroup>
+
+## Manual Deployment Options
+
+<Tabs>
+<Tab title="Vercel">
+
+1. **Install Vercel CLI**:
+   ```bash
+   npm install -g vercel
+   ```
+
+2. **Deploy from docs directory**:
+   ```bash
+   cd docs
+   vercel --prod
+   ```
+
+3. **Configure `vercel.json`**:
+   ```json
+   {
+     "name": "doc-converter-docs",
+     "version": 2,
+     "builds": [
+       {
+         "src": "mint.json",
+         "use": "@mintlify/cli",
+         "config": {
+           "installCommand": "npm install",
+           "buildCommand": "mintlify build"
+         }
+       }
+     ]
+   }
+   ```
+
+</Tab>
+<Tab title="Netlify">
+
+1. **Create `netlify.toml`**:
+   ```toml
+   [build]
+     command = "npm run build"
+     publish = "_site"
+   
+   [build.environment]
+     NODE_VERSION = "18"
+   ```
+
+2. **Deploy via Netlify CLI**:
+   ```bash
+   npm install -g netlify-cli
+   netlify deploy --prod
+   ```
+
+</Tab>
+<Tab title="GitHub Pages">
+
+1. **Create workflow** `.github/workflows/docs.yml`:
+   ```yaml
+   name: Deploy Documentation
+   
+   on:
+     push:
+       branches: [ main ]
+       paths: [ 'docs/**' ]
+   
+   jobs:
+     deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v3
+         
+         - name: Setup Node.js
+           uses: actions/setup-node@v3
+           with:
+             node-version: '18'
+             
+         - name: Install dependencies
+           run: |
+             cd docs
+             npm install
+             
+         - name: Build documentation
+           run: |
+             cd docs
+             npm run build
+             
+         - name: Deploy to GitHub Pages
+           uses: peaceiris/actions-gh-pages@v3
+           with:
+             github_token: ${{ secrets.GITHUB_TOKEN }}
+             publish_dir: ./docs/_site
+   ```
+
+</Tab>
+</Tabs>
+
+## Custom Domain Setup
+
+<Tabs>
+<Tab title="Mintlify Cloud">
+
+<Steps>
+<Step title="Access Dashboard">
+Go to your Mintlify dashboard
+</Step>
+<Step title="Navigate to Settings">
+Navigate to **Settings** → **Custom Domain**
+</Step>
+<Step title="Add Domain">
+Add your domain (e.g., `docs.yourdomain.com`)
+</Step>
+<Step title="Update DNS">
+Update DNS records:
+```
+Type: CNAME
+Name: docs
+Value: your-site.mintlify.app
+```
+</Step>
+</Steps>
+
+</Tab>
+<Tab title="Self-Hosted">
+
+1. **Configure DNS**:
+   ```
+   Type: A
+   Name: docs
+   Value: your-server-ip
+   ```
+
+2. **Set up reverse proxy** (Nginx):
+   ```nginx
+   server {
+       listen 80;
+       server_name docs.yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+
+</Tab>
+</Tabs>
+
+## Environment Variables
+
+<Warning>
+For production deployments, set these environment variables:
+</Warning>
+
+```bash
+# Production environment
+NODE_ENV=production
+
+# Custom domain (if applicable)
+CUSTOM_DOMAIN=docs.yourdomain.com
+
+# Analytics (optional)
+GOOGLE_ANALYTICS_ID=G-XXXXXXXXXX
+```
+
+## Monitoring
+
+### Health Check
+
+Add a health check endpoint to monitor your documentation:
+
+```javascript
+// scripts/health-check.js
+const https = require('https');
+
+function checkHealth() {
+  const options = {
+    hostname: 'docs.yourdomain.com',
+    port: 443,
+    path: '/',
+    method: 'GET'
+  };
+
+  const req = https.request(options, (res) => {
+    console.log(`Status: ${res.statusCode}`);
+    console.log(`Headers: ${JSON.stringify(res.headers)}`);
+  });
+
+  req.on('error', (e) => {
+    console.error(`Health check failed: ${e.message}`);
+  });
+
+  req.end();
+}
+
+checkHealth();
+```
+
+### Uptime Monitoring
+
+<CardGroup cols={3}>
+<Card title="UptimeRobot" icon="heart">
+Free uptime monitoring
+</Card>
+<Card title="Pingdom" icon="chart-line">
+Comprehensive monitoring
+</Card>
+<Card title="StatusCake" icon="check-circle">
+Simple uptime checks
+</Card>
+</CardGroup>
+
+## Performance Optimization
+
+### 1. Build Optimization
+
+```json
+{
+  "scripts": {
+    "build": "mintlify build --optimize",
+    "build:prod": "NODE_ENV=production mintlify build --optimize --minify"
+  }
+}
+```
+
+### 2. CDN Setup
+
+Use a CDN for better performance:
+
+```javascript
+// mintlify.config.js
+module.exports = {
+  cdn: {
+    enabled: true,
+    domain: 'cdn.yourdomain.com'
+  }
+};
+```
+
+### 3. Caching Headers
+
+Configure caching in your web server:
+
+```nginx
+location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+location ~* \.(html|json)$ {
+    expires 1h;
+    add_header Cache-Control "public, must-revalidate";
+}
+```
+
+## Security
+
+### HTTPS Setup
+
+<Tabs>
+<Tab title="Let's Encrypt">
+```bash
+certbot --nginx -d docs.yourdomain.com
+```
+</Tab>
+<Tab title="Cloudflare">
+- Add domain to Cloudflare
+- Set SSL/TLS to "Full (strict)"
+- Enable "Always Use HTTPS"
+</Tab>
+</Tabs>
+
+### Content Security Policy
+
+Add CSP headers for security:
+
+```nginx
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:";
+```
+
+## Backup Strategy
+
+<AccordionGroup>
+<Accordion title="Repository Backup">
+```bash
+# Automated backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+git clone https://github.com/your-username/doc-converter.git backup_$DATE
+tar -czf docs_backup_$DATE.tar.gz backup_$DATE/docs
+rm -rf backup_$DATE
+```
+</Accordion>
+
+<Accordion title="Built Site Backup">
+```bash
+# Backup built documentation
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+cd docs
+npm run build
+tar -czf ../docs_site_backup_$DATE.tar.gz _site/
+```
+</Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Common Issues
+
+<Tabs>
+<Tab title="Build Failures">
+```bash
+# Clear cache and rebuild
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+</Tab>
+<Tab title="Missing Pages">
+- Check `mint.json` navigation
+- Verify file paths are correct
+- Ensure all referenced files exist
+</Tab>
+<Tab title="Styling Issues">
+- Check for conflicting CSS
+- Verify Mintlify components are used correctly
+- Test in different browsers
+</Tab>
+</Tabs>
+
+### Debug Mode
+
+Enable debug mode for troubleshooting:
+
+```bash
+DEBUG=true npm run dev
+```
+
+## Maintenance
+
+### Regular Updates
+
+<Steps>
+<Step title="Update dependencies">
+```bash
+npm update
+```
+</Step>
+<Step title="Update Mintlify CLI">
+```bash
+npm install -g @mintlify/cli@latest
+```
+</Step>
+<Step title="Check for broken links">
+```bash
+npm install -g broken-link-checker
+blc http://docs.yourdomain.com
+```
+</Step>
+</Steps>
+
+### Content Review
+
+Set up regular content reviews:
+
+<CardGroup cols={2}>
+<Card title="Quarterly Reviews" icon="calendar">
+Review all documentation quarterly
+</Card>
+<Card title="Update Screenshots" icon="image">
+Keep screenshots and examples current
+</Card>
+<Card title="Verify API Changes" icon="code">
+Document new API changes
+</Card>
+<Card title="Check Information" icon="exclamation-triangle">
+Remove outdated information
+</Card>
+</CardGroup>
+
+## Support
+
+<Info>
+For deployment issues:
+</Info>
+
+1. Check [Mintlify documentation](https://mintlify.com/docs)
+2. Review deployment logs
+3. Test locally first
+4. Contact support if needed
+
+## Next Steps
+
+After deployment:
+
+<Steps>
+<Step title="Set up monitoring">
+Configure monitoring and alerts
+</Step>
+<Step title="Configure analytics">
+Set up analytics tracking
+</Step>
+<Step title="Test functionality">
+Test all functionality thoroughly
+</Step>
+<Step title="Update DNS">
+Update DNS and SSL certificates
+</Step>
+<Step title="Inform team">
+Share new documentation URL with team
+</Step>
+</Steps>

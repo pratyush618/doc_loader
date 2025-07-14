@@ -1,0 +1,881 @@
+---
+title: Error Handling
+description: 'API error responses and troubleshooting guide'
+---
+
+## Overview
+
+The Document Converter API uses standard HTTP status codes to indicate the success or failure of requests. This guide covers all possible error scenarios and how to handle them properly.
+
+## HTTP Status Codes
+
+<CardGroup cols={2}>
+  <Card title="Success (2xx)" icon="check">
+    - **200 OK** - Request successful
+    - **201 Created** - Resource created successfully
+  </Card>
+  <Card title="Client Errors (4xx)" icon="warning">
+    - **400 Bad Request** - Invalid request
+    - **404 Not Found** - Resource not found
+    - **413 Payload Too Large** - File too large
+    - **422 Unprocessable Entity** - Validation error
+  </Card>
+  <Card title="Server Errors (5xx)" icon="x">
+    - **500 Internal Server Error** - Server error
+    - **503 Service Unavailable** - Service temporarily unavailable
+  </Card>
+</CardGroup>
+
+## Error Response Format
+
+All error responses follow a consistent JSON format:
+
+```json
+{
+  "detail": "Error message",
+  "type": "error_type",
+  "code": "ERROR_CODE",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+<ResponseField name="detail" type="string" required>
+  Human-readable error description
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Error type for programmatic handling
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Unique error code for specific error identification
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  When the error occurred (ISO 8601 format)
+</ResponseField>
+
+## Common Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request">
+    **Description:** The request was invalid or cannot be served.
+    
+    **Common Causes:**
+    - Job is not completed yet
+    - Invalid request parameters
+    - Missing required fields
+    - Malformed request body
+    
+    **Example:**
+    ```json
+    {
+      "detail": "Job is not completed yet",
+      "type": "invalid_request",
+      "code": "JOB_NOT_COMPLETED",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    import requests
+    
+    response = requests.get("/api/v1/jobs/123/result")
+    
+    if response.status_code == 400:
+        error = response.json()
+        if error.get("code") == "JOB_NOT_COMPLETED":
+            print("Job is still processing. Please wait.")
+        else:
+            print(f"Bad request: {error['detail']}")
+    ```
+  </Accordion>
+  
+  <Accordion title="404 Not Found">
+    **Description:** The requested resource was not found.
+    
+    **Common Causes:**
+    - Job ID doesn't exist
+    - Result file was deleted
+    - Invalid endpoint URL
+    - Resource expired
+    
+    **Example:**
+    ```json
+    {
+      "detail": "Job not found",
+      "type": "resource_not_found",
+      "code": "JOB_NOT_FOUND",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    response = requests.get("/api/v1/jobs/invalid-id")
+    
+    if response.status_code == 404:
+        error = response.json()
+        print(f"Resource not found: {error['detail']}")
+        # Handle job not found scenario
+    ```
+  </Accordion>
+  
+  <Accordion title="413 Payload Too Large">
+    **Description:** The uploaded file exceeds the maximum size limit.
+    
+    **Common Causes:**
+    - File larger than MAX_FILE_SIZE (default 100MB)
+    - Compressed file that expands too much
+    - Multiple files in a single request
+    
+    **Example:**
+    ```json
+    {
+      "detail": "File too large. Maximum size is 100MB",
+      "type": "file_too_large",
+      "code": "FILE_SIZE_EXCEEDED",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    import os
+    
+    def upload_file(file_path):
+        file_size = os.path.getsize(file_path)
+        max_size = 100 * 1024 * 1024  # 100MB in bytes
+        
+        if file_size > max_size:
+            print(f"File too large: {file_size} bytes (max: {max_size} bytes)")
+            return False
+        
+        with open(file_path, 'rb') as f:
+            response = requests.post("/api/v1/jobs", files={"file": f})
+            
+            if response.status_code == 413:
+                error = response.json()
+                print(f"Upload failed: {error['detail']}")
+                return False
+        
+        return True
+    ```
+  </Accordion>
+  
+  <Accordion title="422 Unprocessable Entity">
+    **Description:** The request was well-formed but contains semantic errors.
+    
+    **Common Causes:**
+    - Invalid output format
+    - Invalid OCR provider
+    - Validation errors in request data
+    - Unsupported file type
+    
+    **Example:**
+    ```json
+    {
+      "detail": [
+        {
+          "loc": ["body", "output_format"],
+          "msg": "Input should be 'md' or 'json'",
+          "type": "value_error"
+        }
+      ],
+      "type": "validation_error",
+      "code": "VALIDATION_ERROR",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    response = requests.post("/api/v1/jobs", files={"file": f}, data={"output_format": "invalid"})
+    
+    if response.status_code == 422:
+        error = response.json()
+        if isinstance(error["detail"], list):
+            for validation_error in error["detail"]:
+                field = " -> ".join(str(x) for x in validation_error["loc"])
+                print(f"Validation error in {field}: {validation_error['msg']}")
+        else:
+            print(f"Validation error: {error['detail']}")
+    ```
+  </Accordion>
+  
+  <Accordion title="500 Internal Server Error">
+    **Description:** An unexpected error occurred on the server.
+    
+    **Common Causes:**
+    - Unhandled exceptions
+    - Database connection issues
+    - File system errors
+    - OCR provider failures
+    
+    **Example:**
+    ```json
+    {
+      "detail": "Internal server error",
+      "type": "internal_error",
+      "code": "INTERNAL_ERROR",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    import time
+    
+    def retry_request(func, max_retries=3, delay=1):
+        for attempt in range(max_retries):
+            try:
+                response = func()
+                if response.status_code == 500:
+                    if attempt < max_retries - 1:
+                        time.sleep(delay * (2 ** attempt))  # Exponential backoff
+                        continue
+                    else:
+                        raise Exception("Server error after retries")
+                return response
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(delay * (2 ** attempt))
+                    continue
+                raise e
+    ```
+  </Accordion>
+  
+  <Accordion title="503 Service Unavailable">
+    **Description:** The service is temporarily unavailable.
+    
+    **Common Causes:**
+    - Redis connection failure
+    - Celery workers not available
+    - System overload
+    - Maintenance mode
+    
+    **Example:**
+    ```json
+    {
+      "detail": "Service temporarily unavailable",
+      "type": "service_unavailable",
+      "code": "SERVICE_UNAVAILABLE",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+    ```
+    
+    **How to Handle:**
+    ```python
+    response = requests.get("/api/v1/ready")
+    
+    if response.status_code == 503:
+        error = response.json()
+        print(f"Service unavailable: {error['detail']}")
+        # Implement retry logic or circuit breaker
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling Best Practices
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    import requests
+    import time
+    from typing import Optional, Dict, Any
+
+    class DocumentConverterError(Exception):
+        """Base exception for Document Converter errors"""
+        def __init__(self, message: str, status_code: int, error_code: Optional[str] = None):
+            self.message = message
+            self.status_code = status_code
+            self.error_code = error_code
+            super().__init__(message)
+
+    class DocumentConverterClient:
+        def __init__(self, base_url: str):
+            self.base_url = base_url
+            self.session = requests.Session()
+        
+        def _handle_response(self, response: requests.Response) -> Dict[Any, Any]:
+            """Handle HTTP response and raise appropriate exceptions"""
+            if response.status_code == 200:
+                return response.json()
+            
+            try:
+                error_data = response.json()
+                error_message = error_data.get("detail", "Unknown error")
+                error_code = error_data.get("code")
+            except ValueError:
+                error_message = response.text or f"HTTP {response.status_code}"
+                error_code = None
+            
+            raise DocumentConverterError(
+                message=error_message,
+                status_code=response.status_code,
+                error_code=error_code
+            )
+        
+        def create_job(self, file_path: str, output_format: str, **kwargs) -> Dict[Any, Any]:
+            """Create a conversion job with error handling"""
+            try:
+                with open(file_path, 'rb') as f:
+                    files = {"file": f}
+                    data = {"output_format": output_format, **kwargs}
+                    
+                    response = self.session.post(
+                        f"{self.base_url}/api/v1/jobs",
+                        files=files,
+                        data=data
+                    )
+                    
+                    return self._handle_response(response)
+            
+            except DocumentConverterError:
+                raise
+            except Exception as e:
+                raise DocumentConverterError(f"Request failed: {str(e)}", 0)
+        
+        def get_job_status(self, job_id: str) -> Dict[Any, Any]:
+            """Get job status with error handling"""
+            try:
+                response = self.session.get(f"{self.base_url}/api/v1/jobs/{job_id}")
+                return self._handle_response(response)
+            except DocumentConverterError:
+                raise
+            except Exception as e:
+                raise DocumentConverterError(f"Request failed: {str(e)}", 0)
+        
+        def download_result(self, job_id: str, output_path: str) -> None:
+            """Download result with error handling"""
+            try:
+                response = self.session.get(f"{self.base_url}/api/v1/jobs/{job_id}/result")
+                
+                if response.status_code == 200:
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+                else:
+                    self._handle_response(response)
+            
+            except DocumentConverterError:
+                raise
+            except Exception as e:
+                raise DocumentConverterError(f"Download failed: {str(e)}", 0)
+
+    # Usage example
+    client = DocumentConverterClient("http://localhost:8000")
+
+    try:
+        # Create job
+        job = client.create_job("document.pdf", "md")
+        print(f"Job created: {job['id']}")
+        
+        # Wait for completion
+        while True:
+            status = client.get_job_status(job['id'])
+            if status['status'] == 'completed':
+                client.download_result(job['id'], "result.md")
+                break
+            elif status['status'] == 'failed':
+                raise DocumentConverterError(
+                    f"Job failed: {status.get('error_message', 'Unknown error')}",
+                    500
+                )
+            
+            time.sleep(2)
+    
+    except DocumentConverterError as e:
+        print(f"Conversion failed: {e.message} (Status: {e.status_code})")
+        if e.error_code:
+            print(f"Error code: {e.error_code}")
+    ```
+  </Tab>
+  
+  <Tab title="JavaScript">
+    ```javascript
+    class DocumentConverterError extends Error {
+        constructor(message, statusCode, errorCode = null) {
+            super(message);
+            this.name = 'DocumentConverterError';
+            this.statusCode = statusCode;
+            this.errorCode = errorCode;
+        }
+    }
+
+    class DocumentConverterClient {
+        constructor(baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+        
+        async _handleResponse(response) {
+            if (response.ok) {
+                return await response.json();
+            }
+            
+            let errorMessage = `HTTP ${response.status}`;
+            let errorCode = null;
+            
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorMessage;
+                errorCode = errorData.code;
+            } catch (e) {
+                // Use default error message if JSON parsing fails
+            }
+            
+            throw new DocumentConverterError(errorMessage, response.status, errorCode);
+        }
+        
+        async createJob(file, outputFormat, options = {}) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('output_format', outputFormat);
+                
+                Object.entries(options).forEach(([key, value]) => {
+                    formData.append(key, value);
+                });
+                
+                const response = await fetch(`${this.baseUrl}/api/v1/jobs`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                return await this._handleResponse(response);
+            } catch (error) {
+                if (error instanceof DocumentConverterError) {
+                    throw error;
+                }
+                throw new DocumentConverterError(`Request failed: ${error.message}`, 0);
+            }
+        }
+        
+        async getJobStatus(jobId) {
+            try {
+                const response = await fetch(`${this.baseUrl}/api/v1/jobs/${jobId}`);
+                return await this._handleResponse(response);
+            } catch (error) {
+                if (error instanceof DocumentConverterError) {
+                    throw error;
+                }
+                throw new DocumentConverterError(`Request failed: ${error.message}`, 0);
+            }
+        }
+        
+        async downloadResult(jobId) {
+            try {
+                const response = await fetch(`${this.baseUrl}/api/v1/jobs/${jobId}/result`);
+                
+                if (response.ok) {
+                    return await response.blob();
+                } else {
+                    await this._handleResponse(response);
+                }
+            } catch (error) {
+                if (error instanceof DocumentConverterError) {
+                    throw error;
+                }
+                throw new DocumentConverterError(`Download failed: ${error.message}`, 0);
+            }
+        }
+        
+        async waitForCompletion(jobId, timeout = 300000) {
+            const startTime = Date.now();
+            
+            while (Date.now() - startTime < timeout) {
+                const status = await this.getJobStatus(jobId);
+                
+                if (status.status === 'completed') {
+                    return status;
+                } else if (status.status === 'failed') {
+                    throw new DocumentConverterError(
+                        `Job failed: ${status.error_message || 'Unknown error'}`,
+                        500
+                    );
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            throw new DocumentConverterError(`Job timeout after ${timeout}ms`, 408);
+        }
+    }
+
+    // Usage example
+    const client = new DocumentConverterClient('http://localhost:8000');
+
+    async function convertDocument(file) {
+        try {
+            // Create job
+            const job = await client.createJob(file, 'md');
+            console.log('Job created:', job.id);
+            
+            // Wait for completion
+            const completedJob = await client.waitForCompletion(job.id);
+            console.log('Job completed:', completedJob.id);
+            
+            // Download result
+            const result = await client.downloadResult(job.id);
+            console.log('Result downloaded:', result.size, 'bytes');
+            
+            return result;
+        } catch (error) {
+            if (error instanceof DocumentConverterError) {
+                console.error('Conversion failed:', error.message);
+                console.error('Status code:', error.statusCode);
+                if (error.errorCode) {
+                    console.error('Error code:', error.errorCode);
+                }
+            } else {
+                console.error('Unexpected error:', error);
+            }
+            throw error;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Retry Strategies
+
+<CardGroup cols={2}>
+  <Card title="Exponential Backoff" icon="clock">
+    **Use for:** Temporary failures (5xx errors)
+    
+    **Implementation:**
+    ```python
+    import time
+    import random
+    
+    def exponential_backoff(attempt, base_delay=1, max_delay=60):
+        delay = min(base_delay * (2 ** attempt), max_delay)
+        jitter = random.uniform(0, delay * 0.1)
+        return delay + jitter
+    
+    for attempt in range(max_retries):
+        try:
+            response = make_request()
+            if response.status_code < 500:
+                return response
+        except Exception:
+            pass
+        
+        if attempt < max_retries - 1:
+            time.sleep(exponential_backoff(attempt))
+    ```
+  </Card>
+  <Card title="Circuit Breaker" icon="shield">
+    **Use for:** Persistent failures
+    
+    **Implementation:**
+    ```python
+    class CircuitBreaker:
+        def __init__(self, failure_threshold=5, timeout=60):
+            self.failure_threshold = failure_threshold
+            self.timeout = timeout
+            self.failure_count = 0
+            self.last_failure = None
+            self.state = 'closed'
+        
+        def call(self, func):
+            if self.state == 'open':
+                if time.time() - self.last_failure > self.timeout:
+                    self.state = 'half-open'
+                else:
+                    raise Exception("Circuit breaker is open")
+            
+            try:
+                result = func()
+                self.failure_count = 0
+                self.state = 'closed'
+                return result
+            except Exception as e:
+                self.failure_count += 1
+                self.last_failure = time.time()
+                
+                if self.failure_count >= self.failure_threshold:
+                    self.state = 'open'
+                
+                raise e
+    ```
+  </Card>
+</CardGroup>
+
+## Error Monitoring
+
+<CodeGroup>
+
+```python Error Tracking
+import logging
+import traceback
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('api_errors.log'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+def log_api_error(response, request_data=None):
+    """Log API errors with context"""
+    try:
+        error_data = response.json()
+        error_message = error_data.get('detail', 'Unknown error')
+        error_code = error_data.get('code', 'NO_CODE')
+    except:
+        error_message = response.text or f"HTTP {response.status_code}"
+        error_code = 'PARSE_ERROR'
+    
+    logger.error(
+        f"API Error: {error_message}",
+        extra={
+            'status_code': response.status_code,
+            'error_code': error_code,
+            'url': response.url,
+            'request_data': request_data,
+            'response_headers': dict(response.headers),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+    )
+
+# Usage
+try:
+    response = requests.post("/api/v1/jobs", files=files, data=data)
+    if not response.ok:
+        log_api_error(response, request_data=data)
+except Exception as e:
+    logger.error(f"Request failed: {str(e)}", exc_info=True)
+```
+
+```javascript Error Reporting
+class ErrorReporter {
+    constructor(apiEndpoint) {
+        this.apiEndpoint = apiEndpoint;
+        this.errorQueue = [];
+        this.isReporting = false;
+    }
+    
+    reportError(error, context = {}) {
+        const errorReport = {
+            message: error.message,
+            statusCode: error.statusCode,
+            errorCode: error.errorCode,
+            timestamp: new Date().toISOString(),
+            context: context,
+            userAgent: navigator.userAgent,
+            url: window.location.href
+        };
+        
+        this.errorQueue.push(errorReport);
+        this.flushErrors();
+    }
+    
+    async flushErrors() {
+        if (this.isReporting || this.errorQueue.length === 0) {
+            return;
+        }
+        
+        this.isReporting = true;
+        
+        try {
+            const errors = this.errorQueue.splice(0);
+            
+            await fetch(this.apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ errors })
+            });
+        } catch (reportingError) {
+            // Failed to report errors, add them back to queue
+            this.errorQueue.unshift(...errors);
+            console.error('Failed to report errors:', reportingError);
+        } finally {
+            this.isReporting = false;
+        }
+    }
+}
+
+// Usage
+const errorReporter = new ErrorReporter('/api/v1/errors');
+
+try {
+    const job = await client.createJob(file, 'md');
+} catch (error) {
+    errorReporter.reportError(error, {
+        operation: 'create_job',
+        fileType: file.type,
+        fileSize: file.size
+    });
+    throw error;
+}
+```
+
+</CodeGroup>
+
+## Testing Error Scenarios
+
+<Tabs>
+  <Tab title="Unit Tests">
+    ```python
+    import unittest
+    from unittest.mock import patch, Mock
+    import requests
+    
+    class TestErrorHandling(unittest.TestCase):
+        def setUp(self):
+            self.client = DocumentConverterClient("http://localhost:8000")
+        
+        @patch('requests.Session.post')
+        def test_file_too_large_error(self, mock_post):
+            mock_response = Mock()
+            mock_response.status_code = 413
+            mock_response.json.return_value = {
+                "detail": "File too large. Maximum size is 100MB",
+                "code": "FILE_SIZE_EXCEEDED"
+            }
+            mock_post.return_value = mock_response
+            
+            with self.assertRaises(DocumentConverterError) as cm:
+                self.client.create_job("large_file.pdf", "md")
+            
+            self.assertEqual(cm.exception.status_code, 413)
+            self.assertEqual(cm.exception.error_code, "FILE_SIZE_EXCEEDED")
+        
+        @patch('requests.Session.get')
+        def test_job_not_found_error(self, mock_get):
+            mock_response = Mock()
+            mock_response.status_code = 404
+            mock_response.json.return_value = {
+                "detail": "Job not found",
+                "code": "JOB_NOT_FOUND"
+            }
+            mock_get.return_value = mock_response
+            
+            with self.assertRaises(DocumentConverterError) as cm:
+                self.client.get_job_status("invalid-job-id")
+            
+            self.assertEqual(cm.exception.status_code, 404)
+            self.assertEqual(cm.exception.error_code, "JOB_NOT_FOUND")
+    ```
+  </Tab>
+  
+  <Tab title="Integration Tests">
+    ```python
+    import pytest
+    import requests
+    
+    @pytest.fixture
+    def api_client():
+        return DocumentConverterClient("http://localhost:8000")
+    
+    def test_unsupported_file_type(api_client):
+        """Test error handling for unsupported file types"""
+        with pytest.raises(DocumentConverterError) as exc_info:
+            api_client.create_job("test.xyz", "md")
+        
+        assert exc_info.value.status_code == 422
+        assert "unsupported" in exc_info.value.message.lower()
+    
+    def test_invalid_output_format(api_client):
+        """Test error handling for invalid output format"""
+        with pytest.raises(DocumentConverterError) as exc_info:
+            api_client.create_job("test.pdf", "invalid")
+        
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.error_code == "VALIDATION_ERROR"
+    
+    def test_server_error_retry(api_client):
+        """Test retry logic for server errors"""
+        with patch.object(api_client, '_handle_response') as mock_handle:
+            # First call fails with 500, second succeeds
+            mock_handle.side_effect = [
+                DocumentConverterError("Server error", 500),
+                {"id": "job-123", "status": "pending"}
+            ]
+            
+            # Should retry and succeed
+            result = api_client.create_job("test.pdf", "md")
+            assert result["id"] == "job-123"
+    ```
+  </Tab>
+</Tabs>
+
+## Error Prevention
+
+<CardGroup cols={2}>
+  <Card title="Input Validation" icon="shield-check">
+    Validate inputs before making API calls
+    
+    - Check file size limits
+    - Verify file types
+    - Validate parameters
+    - Sanitize user inputs
+  </Card>
+  <Card title="Graceful Degradation" icon="layers">
+    Handle failures gracefully
+    
+    - Provide fallback options
+    - Show user-friendly messages
+    - Maintain application state
+    - Log errors for debugging
+  </Card>
+  <Card title="Monitoring" icon="chart-line">
+    Monitor error rates and patterns
+    
+    - Track error frequency
+    - Identify error trends
+    - Set up alerts
+    - Analyze error logs
+  </Card>
+  <Card title="Documentation" icon="book">
+    Document error scenarios
+    
+    - Provide error guides
+    - Include example responses
+    - Document recovery steps
+    - Update troubleshooting docs
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Jobs API"
+    icon="briefcase"
+    href="/api-reference/jobs"
+  >
+    Learn about the main Jobs API endpoints
+  </Card>
+  <Card
+    title="Health API"
+    icon="heart"
+    href="/api-reference/health"
+  >
+    Monitor API health and readiness
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="/examples/basic-conversion"
+  >
+    See error handling in action
+  </Card>
+  <Card
+    title="Monitoring"
+    icon="chart-line"
+    href="/advanced/monitoring"
+  >
+    Set up error monitoring and alerting
+  </Card>
+</CardGroup>
