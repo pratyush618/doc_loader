@@ -1,0 +1,375 @@
+---
+title: JSON Output Format
+description: 'Structured JSON output format for converted documents'
+---
+
+When choosing JSON as the output format, the document converter provides structured, hierarchical data that preserves the organization and meaning of the original document.
+
+<Info>
+  JSON output maintains the original document structure while making it programmatically accessible for further processing.
+</Info>
+
+## Base Structure
+
+All JSON outputs follow this base structure:
+
+```json
+{
+  "document": {
+    "filename": "original_filename.ext",
+    "title": "Document Title",
+    "type": "Document Type",
+    "metadata": { /* document-specific metadata */ }
+  },
+  "content": { /* structured content based on document type */ },
+  "images": { /* base64-encoded images if present */ }
+}
+```
+
+<CardGroup cols={3}>
+  <Card title="Document" icon="file">
+    Metadata about the original document
+  </Card>
+  <Card title="Content" icon="list">
+    Structured content based on document type
+  </Card>
+  <Card title="Images" icon="image">
+    Base64-encoded images found in the document
+  </Card>
+</CardGroup>
+
+## Document-Specific Structures
+
+<Tabs>
+  <Tab title="PDF Documents">
+    PDF documents are structured page-wise with concise summaries:
+
+    ```json
+    {
+      "document": {
+        "filename": "report.pdf",
+        "title": "Annual Report",
+        "type": "PDF Document",
+        "metadata": {
+          "num_pages": 10,
+          "author": "John Doe",
+          "created": "2024-01-15T10:30:00Z"
+        }
+      },
+      "content": {
+        "type": "multi_page_document",
+        "total_pages": 10,
+        "pages": [
+          {
+            "page_number": 1,
+            "text": "Page 1 complete text content...",
+            "word_count": 245
+          },
+          {
+            "page_number": 2,
+            "text": "Page 2 complete text content...",
+            "word_count": 312
+          }
+        ]
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="PowerPoint Presentations">
+    Presentations are structured slide-wise with concise summaries:
+
+    ```json
+    {
+      "document": {
+        "filename": "presentation.pptx",
+        "title": "Marketing Strategy",
+        "type": "PowerPoint Presentation",
+        "metadata": {
+          "num_slides": 15,
+          "slide_width": 9144000,
+          "slide_height": 6858000
+        }
+      },
+      "content": {
+        "type": "presentation",
+        "total_slides": 15,
+        "slides": [
+          {
+            "slide_number": 1,
+            "text": "## Introduction\n- Point 1\n- Point 2\n- Point 3",
+            "summary": "Introduction"
+          },
+          {
+            "slide_number": 2,
+            "text": "## Market Analysis\n- Current trends\n- Competition overview",
+            "summary": "Market Analysis"
+          }
+        ]
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Excel Spreadsheets">
+    Spreadsheets provide summary information with sample data (not full data):
+
+    ```json
+    {
+      "document": {
+        "filename": "data.xlsx",
+        "title": "Sales Data",
+        "type": "Excel Workbook",
+        "metadata": {
+          "num_sheets": 3,
+          "sheet_names": ["Sales", "Summary", "Charts"]
+        }
+      },
+      "content": {
+        "type": "spreadsheet",
+        "total_sheets": 3,
+        "sheet_names": ["Sales", "Summary", "Charts"],
+        "sheets": [
+          {
+            "sheet_name": "Sales",
+            "row_count": 1000,
+            "column_count": 5,
+            "headers": ["Date", "Product", "Amount", "Region", "Salesperson"],
+            "has_data": true,
+            "sample_data": [
+              ["2024-01-01", "Widget A", "150.00", "North", "John"],
+              ["2024-01-02", "Widget B", "200.00", "South", "Jane"],
+              ["2024-01-03", "Widget C", "175.00", "East", "Bob"]
+            ]
+          }
+        ]
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Word Documents">
+    Word documents are organized by sections and headings:
+
+    ```json
+    {
+      "document": {
+        "filename": "report.docx",
+        "title": "Project Report",
+        "type": "Word Document",
+        "metadata": {
+          "author": "Jane Smith",
+          "created": "2024-01-10T14:30:00Z",
+          "num_paragraphs": 25
+        }
+      },
+      "content": {
+        "type": "structured_document",
+        "total_sections": 5,
+        "sections": [
+          {
+            "heading": "Executive Summary",
+            "content": "This section contains the executive summary..."
+          },
+          {
+            "heading": "Introduction",
+            "content": "The introduction section explains..."
+          }
+        ]
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Images
+
+When documents contain images, they are included as base64-encoded data:
+
+```json
+{
+  "images": {
+    "chart1.png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+    "logo.jpg": "base64_encoded_image_data_here..."
+  }
+}
+```
+
+<Warning>
+  Images are base64-encoded, which can result in large JSON files. Consider the trade-off between completeness and file size.
+</Warning>
+
+## Element Types
+
+<AccordionGroup>
+  <Accordion title="Slide Elements (PowerPoint)">
+    - **heading**: Text with heading formatting
+    - **bullet_point**: List items and bullet points
+    - **text**: Regular text content
+    - **table_row**: Table row data
+  </Accordion>
+  
+  <Accordion title="Table Data (Spreadsheets)">
+    - **header**: Table header row
+    - **data**: Data rows with both cell arrays and key-value mapping
+    - **empty**: Empty sheets or tables
+  </Accordion>
+  
+  <Accordion title="Document Sections">
+    - **heading**: Section headings at various levels
+    - **content**: Paragraph content within sections
+    - **metadata**: Word count, formatting information
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+Here are code examples for working with different document types:
+
+<CodeGroup>
+
+```javascript PDF Content
+// Get content from page 5
+const page5Content = jsonData.content.pages.find(p => p.page_number === 5);
+console.log(page5Content.text);
+```
+
+```javascript PowerPoint Data
+// Get all bullet points from slide 3
+const slide3 = jsonData.content.slides.find(s => s.slide_number === 3);
+const bulletPoints = slide3.elements?.filter(e => e.type === 'bullet_point');
+```
+
+```javascript Excel Data
+// Get data from "Sales" sheet
+const salesSheet = jsonData.content.sheets.find(s => s.sheet_name === 'Sales');
+const salesData = salesSheet.sample_data;
+
+// Process sample data
+salesData.forEach(row => {
+  const [date, product, amount] = row;
+  console.log(`${product}: ${amount} on ${date}`);
+});
+```
+
+```javascript Word Document
+// Get introduction section
+const intro = jsonData.content.sections.find(s => s.heading === 'Introduction');
+console.log(intro.content);
+```
+
+```python PDF Processing
+import json
+
+# Load JSON data
+with open('converted_document.json', 'r') as f:
+    data = json.load(f)
+
+# Extract all page content
+pages = data['content']['pages']
+full_text = '\n\n'.join(page['text'] for page in pages)
+print(f"Document has {len(pages)} pages")
+```
+
+```python Spreadsheet Processing
+import json
+
+# Load JSON data
+with open('spreadsheet.json', 'r') as f:
+    data = json.load(f)
+
+# Process each sheet
+for sheet in data['content']['sheets']:
+    print(f"Sheet: {sheet['sheet_name']}")
+    print(f"Rows: {sheet['row_count']}, Columns: {sheet['column_count']}")
+    
+    if sheet['has_data']:
+        headers = sheet['headers']
+        for row in sheet['sample_data']:
+            row_dict = dict(zip(headers, row))
+            print(row_dict)
+```
+
+</CodeGroup>
+
+## Schema Validation
+
+For applications requiring strict validation, here's a basic JSON schema structure:
+
+<CodeGroup>
+
+```json Base Schema
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["document", "content"],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": ["filename", "title", "type"],
+      "properties": {
+        "filename": {"type": "string"},
+        "title": {"type": "string"},
+        "type": {"type": "string"},
+        "metadata": {"type": "object"}
+      }
+    },
+    "content": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"type": "string"}
+      }
+    },
+    "images": {
+      "type": "object",
+      "patternProperties": {
+        "^.*\\.(png|jpg|jpeg|gif|bmp)$": {
+          "type": "string",
+          "format": "base64"
+        }
+      }
+    }
+  }
+}
+```
+
+```python Schema Validation
+import json
+import jsonschema
+
+# Load schema and data
+with open('schema.json', 'r') as f:
+    schema = json.load(f)
+
+with open('converted_document.json', 'r') as f:
+    data = json.load(f)
+
+# Validate
+try:
+    jsonschema.validate(data, schema)
+    print("Document is valid!")
+except jsonschema.ValidationError as e:
+    print(f"Validation error: {e.message}")
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Memory Management" icon="memory">
+    Large documents can produce substantial JSON files. Consider streaming or chunked processing for very large files.
+  </Card>
+  <Card title="Image Handling" icon="image">
+    Base64 images increase file size by ~33%. Consider separate image storage for production use.
+  </Card>
+  <Card title="Data Processing" icon="gears">
+    The sample_data arrays are limited to prevent enormous JSON files. Full data extraction may require custom processing.
+  </Card>
+  <Card title="Type Safety" icon="shield">
+    Use TypeScript interfaces or JSON schema validation for robust applications.
+  </Card>
+</CardGroup>
+
+This structured approach makes it easy to programmatically process documents while preserving their original organization and hierarchy.

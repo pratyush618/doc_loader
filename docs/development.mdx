@@ -1,0 +1,276 @@
+---
+title: "Development Guide"
+description: "Development guide for the Document Converter API documentation"
+---
+
+# Document Converter API Documentation
+
+This directory contains the complete documentation for the Document Converter API, built with [Mintlify](https://mintlify.com).
+
+## Structure
+
+<Info>
+The documentation is organized into logical sections for easy navigation
+</Info>
+
+```
+docs/
+├── mint.json                 # Mintlify configuration
+├── introduction.mdx          # Homepage and overview
+├── quickstart.mdx           # Quick start guide
+├── setup.mdx                # Detailed setup instructions
+├── api-reference/           # API documentation
+│   ├── introduction.mdx     # API overview
+│   ├── jobs.mdx            # Jobs API endpoints
+│   ├── health.mdx          # Health check endpoints
+│   └── errors.mdx          # Error handling guide
+├── features/               # Feature documentation
+│   ├── conversion.mdx      # Document conversion
+│   ├── ocr.mdx            # OCR processing
+│   ├── output-formats.mdx  # Output formats
+│   └── webhooks.mdx       # Webhook integration
+├── configuration/          # Configuration guides
+│   └── environment.mdx     # Environment variables
+└── examples/              # Code examples
+    └── basic-conversion.mdx # Basic usage examples
+```
+
+## Development
+
+### Prerequisites
+
+<CardGroup cols={2}>
+<Card title="Node.js" icon="node-js">
+Version 18+ required
+</Card>
+<Card title="Package Manager" icon="npm">
+npm or yarn
+</Card>
+</CardGroup>
+
+### Installation
+
+<Steps>
+<Step title="Install Mintlify CLI">
+```bash
+npm install -g @mintlify/cli
+```
+<Warning>
+On Windows, use the stable version:
+```bash
+npm install @mintlify/cli@4.0.500 --save-dev --force
+```
+</Warning>
+</Step>
+
+<Step title="Navigate to docs directory">
+```bash
+cd docs
+```
+</Step>
+
+<Step title="Start development server">
+```bash
+mintlify dev
+```
+<Info>
+Use `npm run dev` if you have local scripts configured
+</Info>
+</Step>
+</Steps>
+
+The documentation will be available at `http://localhost:3000`.
+
+### Building
+
+To build the documentation for production:
+
+<CodeGroup>
+```bash Global CLI
+mintlify build
+```
+
+```bash Local NPX
+npx @mintlify/cli build
+```
+
+```bash NPM Script
+npm run build
+```
+</CodeGroup>
+
+## Deployment
+
+<Tabs>
+<Tab title="Mintlify Cloud">
+<Info>
+Recommended for ease of use
+</Info>
+
+<Steps>
+<Step title="Sign up">
+Sign up at [Mintlify](https://mintlify.com)
+</Step>
+<Step title="Connect repository">
+Connect your GitHub repository
+</Step>
+<Step title="Configure docs path">
+Configure the docs path as `/docs`
+</Step>
+<Step title="Deploy">
+Deploy automatically on push
+</Step>
+</Steps>
+</Tab>
+
+<Tab title="Self-Hosted">
+You can also deploy the documentation to any static hosting service:
+
+<Steps>
+<Step title="Build documentation">
+```bash
+mintlify build
+```
+</Step>
+<Step title="Deploy _site directory">
+Deploy the `_site` directory to your hosting service
+</Step>
+</Steps>
+</Tab>
+</Tabs>
+
+## Contributing
+
+When adding new documentation:
+
+<Steps>
+<Step title="Create MDX files">
+Create `.mdx` files in the appropriate directory
+</Step>
+<Step title="Update navigation">
+Add the page to `mint.json` navigation
+</Step>
+<Step title="Use Mintlify components">
+Use Mintlify components for better presentation
+</Step>
+<Step title="Test locally">
+Test locally with `mintlify dev`
+</Step>
+<Step title="Submit pull request">
+Submit a pull request
+</Step>
+</Steps>
+
+## Features
+
+<CardGroup cols={2}>
+<Card title="Interactive Components" icon="puzzle-piece">
+Cards, tabs, accordions, and more
+</Card>
+<Card title="Code Examples" icon="code">
+Multi-language code blocks
+</Card>
+<Card title="API Documentation" icon="api">
+Automatic API reference generation
+</Card>
+<Card title="Search" icon="search">
+Built-in search functionality
+</Card>
+<Card title="Dark Mode" icon="moon">
+Automatic dark/light mode support
+</Card>
+<Card title="Mobile Friendly" icon="mobile">
+Responsive design
+</Card>
+<Card title="SEO Optimized" icon="chart-line">
+Meta tags and sitemap generation
+</Card>
+</CardGroup>
+
+## Mintlify Components
+
+The documentation uses Mintlify's special components:
+
+<AccordionGroup>
+<Accordion title="Layout Components">
+- `<Card>` - Feature cards and callouts
+- `<CardGroup>` - Group of cards
+- `<Tabs>` - Tabbed content
+- `<AccordionGroup>` - Collapsible sections
+</Accordion>
+
+<Accordion title="Code Components">
+- `<CodeGroup>` - Multi-language code examples
+- `<ParamField>` - API parameter documentation
+- `<ResponseField>` - API response documentation
+</Accordion>
+
+<Accordion title="Content Components">
+- `<Info>`, `<Warning>`, `<Tip>` - Callout boxes
+- `<Steps>` - Step-by-step instructions
+</Accordion>
+</AccordionGroup>
+
+## Customization
+
+### Branding
+
+Update `mint.json` to customize:
+
+<CardGroup cols={2}>
+<Card title="Colors and Theme" icon="palette">
+Primary colors and theme settings
+</Card>
+<Card title="Logo and Favicon" icon="image">
+Brand assets and icons
+</Card>
+<Card title="Navigation" icon="bars">
+Navigation structure and links
+</Card>
+<Card title="Social Links" icon="link">
+GitHub, Discord, and other links
+</Card>
+</CardGroup>
+
+### Content
+
+All content is written in MDX format, supporting:
+
+<Tabs>
+<Tab title="Markdown">
+Standard Markdown syntax
+</Tab>
+<Tab title="React Components">
+Interactive React components
+</Tab>
+<Tab title="Custom Styling">
+Custom CSS and styling
+</Tab>
+<Tab title="Interactive Elements">
+Interactive elements and widgets
+</Tab>
+</Tabs>
+
+## Support
+
+<Info>
+For documentation issues:
+</Info>
+
+<Steps>
+<Step title="Check Mintlify docs">
+Check the [Mintlify docs](https://mintlify.com/docs)
+</Step>
+<Step title="Open repository issue">
+Open an issue in the repository
+</Step>
+<Step title="Contact development team">
+Contact the development team
+</Step>
+</Steps>
+
+## License
+
+<Warning>
+This documentation is part of the Document Converter project and follows the same license.
+</Warning>

@@ -1,0 +1,610 @@
+---
+title: OCR (Optical Character Recognition)
+description: 'Extract text from images and scanned documents'
+---
+
+OCR (Optical Character Recognition) enables the Document Converter to extract text from images, scanned documents, and PDFs that contain non-selectable text.
+
+## OCR Providers
+
+The Document Converter supports multiple OCR providers, each with different strengths:
+
+<CardGroup cols={3}>
+  <Card title="PaddleOCR" icon="paddle">
+    **Recommended for production**
+    
+    - 80+ languages supported
+    - High accuracy
+    - Free and open source
+    - Works offline
+    - GPU acceleration support
+  </Card>
+  <Card title="EasyOCR" icon="eye">
+    **Easy to set up**
+    
+    - 80+ languages supported
+    - Simple installation
+    - Good performance
+    - PyTorch-based
+    - Active community
+  </Card>
+  <Card title="Mistral AI" icon="brain">
+    **AI-powered**
+    
+    - Context-aware processing
+    - Excellent accuracy
+    - Multi-modal understanding
+    - Requires API key
+    - Cloud-based
+  </Card>
+</CardGroup>
+
+## Configuration
+
+<Tabs>
+  <Tab title="PaddleOCR">
+    **Environment Variables:**
+    ```bash
+    # Enable PaddleOCR
+    PADDLE_OCR_USE_GPU=false
+    PADDLE_OCR_LANG=en
+    PADDLE_MODELS_DIR=./models/paddle_models
+    
+    # PaddlePaddle optimization
+    FLAGS_USE_MKLDNN=0
+    FLAGS_ENABLE_EAGER_MODE=1
+    PADDLE_LOG_LEVEL=3
+    ```
+    
+    **Supported Languages:**
+    - English (`en`)
+    - Chinese Simplified (`ch`)
+    - Chinese Traditional (`chinese_cht`)
+    - French (`french`)
+    - German (`german`)
+    - Japanese (`japan`)
+    - Korean (`korean`)
+    - Spanish (`spanish`)
+    - And 70+ more languages
+    
+    **Installation:**
+    ```bash
+    # CPU version (default)
+    pip install paddlepaddle
+    
+    # GPU version (requires CUDA)
+    pip install paddlepaddle-gpu
+    ```
+    
+    **Usage Example:**
+    ```python
+    # Using PaddleOCR provider
+    response = requests.post(
+        'http://localhost:8000/api/v1/jobs',
+        files={'file': open('scanned_document.pdf', 'rb')},
+        data={
+            'output_format': 'md',
+            'use_ocr': 'true',
+            'ocr_provider': 'paddle'
+        }
+    )
+    ```
+  </Tab>
+  
+  <Tab title="EasyOCR">
+    **Environment Variables:**
+    ```bash
+    # Enable EasyOCR
+    EASY_OCR_USE_GPU=false
+    EASY_OCR_LANG=en
+    EASY_OCR_MODEL_STORAGE=./models/easy_ocr_models
+    
+    # Advanced settings
+    EASY_OCR_TEXT_THRESHOLD=0.7
+    EASY_OCR_LINK_THRESHOLD=0.4
+    EASY_OCR_LOW_TEXT=0.4
+    ```
+    
+    **Language Configuration:**
+    ```bash
+    # Single language
+    EASY_OCR_LANG=en
+    
+    # Multiple languages (comma-separated)
+    EASY_OCR_LANG=en,ch_sim,fr
+    ```
+    
+    **Common Language Codes:**
+    - `en` - English
+    - `ch_sim` - Chinese Simplified
+    - `ch_tra` - Chinese Traditional
+    - `fr` - French
+    - `de` - German
+    - `ja` - Japanese
+    - `ko` - Korean
+    - `es` - Spanish
+    - `ru` - Russian
+    - `ar` - Arabic
+    
+    **GPU Setup:**
+    ```bash
+    # For GPU support
+    EASY_OCR_USE_GPU=true
+    
+    # Requires CUDA installation
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+    ```
+  </Tab>
+  
+  <Tab title="Mistral AI">
+    **Environment Variables:**
+    ```bash
+    # Mistral AI configuration
+    MISTRAL_API_KEY=your_api_key_here
+    MISTRAL_API_URL=https://api.mistral.ai/v1/chat/completions
+    MISTRAL_MODEL=pixtral-12b-2409
+    ```
+    
+    **Getting API Key:**
+    1. Sign up at [Mistral AI](https://mistral.ai)
+    2. Navigate to API Keys section
+    3. Create a new API key
+    4. Add to your environment variables
+    
+    **Model Options:**
+    - `pixtral-12b-2409` - Latest vision model (recommended)
+    - `pixtral-large-2411` - High-accuracy model
+    
+    **Usage Example:**
+    ```python
+    # Using Mistral AI provider
+    response = requests.post(
+        'http://localhost:8000/api/v1/jobs',
+        files={'file': open('complex_image.png', 'rb')},
+        data={
+            'output_format': 'json',
+            'use_ocr': 'true',
+            'ocr_provider': 'mistral'
+        }
+    )
+    ```
+    
+    **Pricing:**
+    - Pay-per-use based on API calls
+    - Check [Mistral AI pricing](https://mistral.ai/pricing) for current rates
+    - More expensive but higher accuracy
+  </Tab>
+</Tabs>
+
+## When to Use OCR
+
+<CardGroup cols={2}>
+  <Card title="Required for:" icon="check">
+    - Scanned documents (PDF, images)
+    - Screenshots of text
+    - Photos of documents
+    - Handwritten text (limited support)
+    - PDFs with image-based text
+    - Old or legacy documents
+  </Card>
+  <Card title="Not needed for:" icon="x">
+    - Modern PDF files with selectable text
+    - Word documents (.docx)
+    - PowerPoint presentations (.pptx)
+    - Excel spreadsheets (.xlsx)
+    - Plain text files (.txt)
+    - Web pages (HTML)
+  </Card>
+</CardGroup>
+
+## OCR Quality Factors
+
+<AccordionGroup>
+  <Accordion title="Image Quality">
+    **Resolution:**
+    - Minimum: 150 DPI
+    - Recommended: 300+ DPI
+    - Higher resolution = better accuracy
+    
+    **Contrast:**
+    - High contrast between text and background
+    - Black text on white background is ideal
+    - Avoid low contrast color combinations
+    
+    **Clarity:**
+    - Sharp, focused images
+    - Avoid blurry or pixelated text
+    - Good lighting conditions
+  </Accordion>
+  
+  <Accordion title="Text Characteristics">
+    **Font Size:**
+    - Minimum: 10pt font size
+    - Recommended: 12pt or larger
+    - Very small text may be missed
+    
+    **Font Type:**
+    - Sans-serif fonts work better
+    - Avoid decorative or script fonts
+    - Standard fonts (Arial, Times) are ideal
+    
+    **Text Orientation:**
+    - Horizontal text works best
+    - Vertical text supported but less accurate
+    - Avoid skewed or rotated text
+  </Accordion>
+  
+  <Accordion title="Layout Considerations">
+    **Structure:**
+    - Clear column separation
+    - Consistent spacing
+    - Avoid overlapping text
+    
+    **Background:**
+    - Clean, uniform background
+    - Avoid patterns or textures
+    - Remove noise and artifacts
+    
+    **Margins:**
+    - Adequate white space around text
+    - Clear boundaries between sections
+    - Avoid text near edges
+  </Accordion>
+</AccordionGroup>
+
+## Performance Comparison
+
+| Provider | Speed | Accuracy | Languages | Offline | GPU Support |
+|----------|-------|----------|-----------|---------|-------------|
+| PaddleOCR | Fast | High | 80+ | ✅ | ✅ |
+| EasyOCR | Medium | Good | 80+ | ✅ | ✅ |
+| Mistral AI | Slow | Very High | All | ❌ | N/A |
+
+## Best Practices
+
+<Steps>
+  <Step title="Choose the Right Provider">
+    - **PaddleOCR**: Production workloads, batch processing
+    - **EasyOCR**: Development, simple setups
+    - **Mistral AI**: Complex documents, maximum accuracy needed
+  </Step>
+  
+  <Step title="Optimize Images">
+    - Scan at 300+ DPI resolution
+    - Use high contrast settings
+    - Ensure proper lighting
+    - Crop to relevant areas
+  </Step>
+  
+  <Step title="Configure Languages">
+    - Specify exact languages for better accuracy
+    - Avoid unnecessary languages (slows processing)
+    - Use multiple languages only when needed
+  </Step>
+  
+  <Step title="Monitor Performance">
+    - Track processing times
+    - Monitor accuracy rates
+    - Adjust settings based on results
+    - Consider hardware upgrades for GPU acceleration
+  </Step>
+</Steps>
+
+## Advanced Configuration
+
+<CodeGroup>
+
+```python PaddleOCR Advanced
+from paddleocr import PaddleOCR
+
+# Initialize with custom settings
+ocr = PaddleOCR(
+    use_angle_cls=True,  # Detect text angle
+    lang='en',           # Language
+    use_gpu=False,       # GPU acceleration
+    show_log=False,      # Disable logging
+    
+    # Detection parameters
+    det_db_thresh=0.3,
+    det_db_box_thresh=0.5,
+    det_db_unclip_ratio=1.6,
+    
+    # Recognition parameters
+    rec_batch_num=6,
+    max_text_length=25,
+    
+    # Text direction classification
+    cls_batch_num=6,
+    cls_thresh=0.9,
+)
+```
+
+```python EasyOCR Advanced
+import easyocr
+
+# Initialize with custom settings
+reader = easyocr.Reader(
+    ['en', 'ch_sim'],    # Languages
+    gpu=False,           # GPU usage
+    model_storage_directory='./models',
+    download_enabled=True,
+    
+    # Recognition parameters
+    decoder='greedy',    # or 'beamsearch'
+    beamWidth=5,         # for beamsearch
+    batch_size=1,        # Batch processing
+    workers=0,           # CPU workers
+    
+    # Quality settings
+    allowlist=None,      # Allowed characters
+    blocklist=None,      # Blocked characters
+    detail=1,            # Detail level
+    paragraph=False,     # Paragraph mode
+)
+```
+
+```bash Environment Tuning
+# Performance optimization
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+
+# Memory management
+export MALLOC_ARENA_MAX=2
+export PYTHONMALLOC=malloc
+
+# GPU settings (if applicable)
+export CUDA_VISIBLE_DEVICES=0
+export CUDA_LAUNCH_BLOCKING=1
+
+# PaddlePaddle specific
+export FLAGS_use_mkldnn=0
+export FLAGS_enable_eager_mode=1
+export PADDLE_LOG_LEVEL=3
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="PaddleOCR Issues">
+    **Common Problems:**
+    - Model download failures
+    - CUDA compatibility issues
+    - Memory errors with large images
+    
+    **Solutions:**
+    ```bash
+    # Pre-download models
+    python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='en')"
+    
+    # Disable GPU if issues
+    PADDLE_OCR_USE_GPU=false
+    
+    # Increase memory limits
+    export MALLOC_ARENA_MAX=4
+    ```
+  </Accordion>
+  
+  <Accordion title="EasyOCR Issues">
+    **Common Problems:**
+    - PyTorch installation issues
+    - CUDA version mismatches
+    - Model loading failures
+    
+    **Solutions:**
+    ```bash
+    # Reinstall PyTorch
+    pip uninstall torch torchvision torchaudio
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    
+    # Clear model cache
+    rm -rf ~/.EasyOCR/
+    
+    # Use CPU only
+    EASY_OCR_USE_GPU=false
+    ```
+  </Accordion>
+  
+  <Accordion title="Mistral AI Issues">
+    **Common Problems:**
+    - API key authentication failures
+    - Rate limiting errors
+    - Network connectivity issues
+    
+    **Solutions:**
+    ```bash
+    # Test API key
+    curl -H "Authorization: Bearer $MISTRAL_API_KEY" \
+         "https://api.mistral.ai/v1/models"
+    
+    # Check rate limits
+    # Implement exponential backoff
+    # Monitor API usage
+    ```
+  </Accordion>
+  
+  <Accordion title="General OCR Issues">
+    **Poor Accuracy:**
+    - Improve image quality
+    - Use correct language settings
+    - Try different OCR providers
+    - Preprocess images (noise reduction, contrast enhancement)
+    
+    **Slow Processing:**
+    - Use GPU acceleration
+    - Reduce image resolution
+    - Process in batches
+    - Consider hardware upgrades
+    
+    **Memory Issues:**
+    - Reduce image size
+    - Process images sequentially
+    - Increase system memory
+    - Use image compression
+  </Accordion>
+</AccordionGroup>
+
+## API Examples
+
+<CodeGroup>
+
+```python Basic OCR
+import requests
+
+# Simple OCR conversion
+response = requests.post(
+    'http://localhost:8000/api/v1/jobs',
+    files={'file': open('scanned_document.pdf', 'rb')},
+    data={
+        'output_format': 'md',
+        'use_ocr': 'true',
+        'ocr_provider': 'paddle'
+    }
+)
+
+job = response.json()
+print(f"Job ID: {job['id']}")
+```
+
+```python Multi-language OCR
+import requests
+
+# OCR with multiple languages
+response = requests.post(
+    'http://localhost:8000/api/v1/jobs',
+    files={'file': open('multilingual_document.png', 'rb')},
+    data={
+        'output_format': 'json',
+        'use_ocr': 'true',
+        'ocr_provider': 'easyocr'
+    }
+)
+
+# Note: Configure languages in environment variables
+# EASY_OCR_LANG=en,ch_sim,fr
+```
+
+```python High-accuracy OCR
+import requests
+
+# Use Mistral AI for maximum accuracy
+response = requests.post(
+    'http://localhost:8000/api/v1/jobs',
+    files={'file': open('complex_document.png', 'rb')},
+    data={
+        'output_format': 'json',
+        'use_ocr': 'true',
+        'ocr_provider': 'mistral'
+    }
+)
+
+# Get detailed results
+job = response.json()
+# Poll for completion and get structured results
+```
+
+```bash Batch OCR Processing
+#!/bin/bash
+
+# Process multiple images with OCR
+for file in *.png *.jpg; do
+    echo "Processing $file..."
+    
+    RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v1/jobs" \
+        -F "file=@$file" \
+        -F "output_format=md" \
+        -F "use_ocr=true" \
+        -F "ocr_provider=paddle")
+    
+    JOB_ID=$(echo $RESPONSE | jq -r '.id')
+    
+    # Wait for completion
+    while true; do
+        STATUS=$(curl -s "http://localhost:8000/api/v1/jobs/$JOB_ID" | jq -r '.status')
+        if [ "$STATUS" = "completed" ]; then
+            curl -s "http://localhost:8000/api/v1/jobs/$JOB_ID/result" -o "${file%.png}.md"
+            break
+        fi
+        sleep 2
+    done
+done
+```
+
+</CodeGroup>
+
+## Monitoring OCR Performance
+
+<CardGroup cols={2}>
+  <Card title="Quality Metrics" icon="chart-line">
+    - Character accuracy rate
+    - Word accuracy rate
+    - Processing time per page
+    - Error rate by document type
+  </Card>
+  <Card title="System Metrics" icon="server">
+    - CPU usage during OCR
+    - Memory consumption
+    - GPU utilization (if enabled)
+    - Network usage (for Mistral AI)
+  </Card>
+</CardGroup>
+
+**Example Monitoring Script:**
+```python
+import time
+import psutil
+import requests
+
+def monitor_ocr_job(job_id):
+    start_time = time.time()
+    start_memory = psutil.virtual_memory().used
+    
+    # Poll job status
+    while True:
+        response = requests.get(f"http://localhost:8000/api/v1/jobs/{job_id}")
+        job = response.json()
+        
+        if job['status'] == 'completed':
+            end_time = time.time()
+            end_memory = psutil.virtual_memory().used
+            
+            print(f"Processing time: {end_time - start_time:.2f}s")
+            print(f"Memory usage: {(end_memory - start_memory) / 1024 / 1024:.2f}MB")
+            break
+        
+        time.sleep(1)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Output Formats"
+    icon="file-code"
+    href="/features/output-formats"
+  >
+    Learn about structured JSON and Markdown outputs
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="webhook"
+    href="/features/webhooks"
+  >
+    Set up real-time notifications for OCR jobs
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy OCR processing at scale
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="/examples/ocr-processing"
+  >
+    See complete OCR integration examples
+  </Card>
+</CardGroup>

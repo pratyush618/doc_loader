@@ -1,0 +1,22 @@
+{
+  "name": "doc-converter-docs",
+  "version": "1.0.0",
+  "description": "Documentation for the Document Converter API",
+  "scripts": {
+    "dev": "npx @mintlify/cli dev",
+    "build": "npx @mintlify/cli build",
+    "preview": "npx @mintlify/cli dev --no-open",
+    "start": "npx @mintlify/cli dev --no-open"
+  },
+  "keywords": [
+    "documentation",
+    "api",
+    "document-converter",
+    "mintlify"
+  ],
+  "author": "Document Converter Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@mintlify/cli": "^4.0.500"
+  }
+}

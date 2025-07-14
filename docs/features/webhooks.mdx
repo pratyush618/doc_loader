@@ -1,0 +1,631 @@
+---
+title: Webhooks
+description: 'Real-time notifications for job completion'
+---
+
+Webhooks provide real-time notifications when document conversion jobs complete, allowing you to build responsive applications that react immediately to processing results.
+
+## Overview
+
+When you submit a job with a webhook URL, the Document Converter will send an HTTP POST request to your endpoint when the job completes (successfully or with failure).
+
+<Info>
+  Webhooks are optional but recommended for production applications to provide better user experience.
+</Info>
+
+## Configuration
+
+<CodeGroup>
+
+```bash Environment Variables
+# Default webhook URL (optional)
+DEFAULT_WEBHOOK_URL=https://your-site.com/webhook
+
+# Webhook settings
+WEBHOOK_TIMEOUT=30
+WEBHOOK_MAX_RETRIES=3
+```
+
+```python Job Creation
+import requests
+
+# Submit job with webhook
+response = requests.post(
+    'http://localhost:8000/api/v1/jobs',
+    files={'file': open('document.pdf', 'rb')},
+    data={
+        'output_format': 'json',
+        'webhook_url': 'https://your-site.com/webhook/document-complete'
+    }
+)
+```
+
+```javascript Job Submission
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('output_format', 'json');
+formData.append('webhook_url', 'https://your-site.com/webhook/document-complete');
+
+const response = await fetch('/api/v1/jobs', {
+  method: 'POST',
+  body: formData
+});
+```
+
+</CodeGroup>
+
+## Webhook Payload
+
+The webhook payload contains complete job information:
+
+```json
+{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "progress": 100,
+  "file_name": "document.pdf",
+  "output_format": "json",
+  "use_ocr": false,
+  "ocr_provider": "paddle",
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:05:00Z",
+  "completed_at": "2024-01-15T10:05:00Z",
+  "result_url": "http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/result",
+  "webhook_url": "https://your-site.com/webhook/document-complete",
+  "metadata": {
+    "processing_time": 5.2,
+    "file_size": 1024000,
+    "pages_processed": 10
+  }
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Success Payload" icon="check">
+    Includes `result_url` for downloading the converted document
+  </Card>
+  <Card title="Failure Payload" icon="x">
+    Includes `error_message` with details about what went wrong
+  </Card>
+</CardGroup>
+
+## Webhook Implementation
+
+<Tabs>
+  <Tab title="Express.js">
+    ```javascript
+    const express = require('express');
+    const app = express();
+
+    app.use(express.json());
+
+    app.post('/webhook/document-complete', (req, res) => {
+      const job = req.body;
+      
+      console.log(`Job ${job.job_id} completed with status: ${job.status}`);
+      
+      if (job.status === 'completed') {
+        // Download the result
+        fetch(job.result_url)
+          .then(response => response.text())
+          .then(content => {
+            console.log('Converted content:', content);
+            // Process the converted document
+            processDocument(job.job_id, content);
+          });
+      } else if (job.status === 'failed') {
+        console.error('Job failed:', job.error_message);
+        handleJobFailure(job.job_id, job.error_message);
+      }
+      
+      res.status(200).send('OK');
+    });
+
+    function processDocument(jobId, content) {
+      // Your document processing logic here
+      console.log(`Processing document for job ${jobId}`);
+    }
+
+    function handleJobFailure(jobId, error) {
+      // Your error handling logic here
+      console.error(`Job ${jobId} failed: ${error}`);
+    }
+
+    app.listen(3000, () => {
+      console.log('Webhook server running on port 3000');
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Python Flask">
+    ```python
+    from flask import Flask, request, jsonify
+    import requests
+    import logging
+
+    app = Flask(__name__)
+    logging.basicConfig(level=logging.INFO)
+
+    @app.route('/webhook/document-complete', methods=['POST'])
+    def webhook_handler():
+        job = request.json
+        
+        logging.info(f"Job {job['job_id']} completed with status: {job['status']}")
+        
+        if job['status'] == 'completed':
+            # Download the result
+            response = requests.get(job['result_url'])
+            if response.status_code == 200:
+                content = response.text
+                logging.info(f"Downloaded content for job {job['job_id']}")
+                process_document(job['job_id'], content)
+            else:
+                logging.error(f"Failed to download result for job {job['job_id']}")
+                
+        elif job['status'] == 'failed':
+            logging.error(f"Job failed: {job.get('error_message', 'Unknown error')}")
+            handle_job_failure(job['job_id'], job.get('error_message'))
+        
+        return jsonify({'status': 'received'}), 200
+
+    def process_document(job_id, content):
+        """Process the converted document"""
+        logging.info(f"Processing document for job {job_id}")
+        # Your document processing logic here
+        
+    def handle_job_failure(job_id, error):
+        """Handle job failure"""
+        logging.error(f"Job {job_id} failed: {error}")
+        # Your error handling logic here
+
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', port=5000)
+    ```
+  </Tab>
+  
+  <Tab title="FastAPI">
+    ```python
+    from fastapi import FastAPI, BackgroundTasks
+    from pydantic import BaseModel
+    import httpx
+    import logging
+
+    app = FastAPI()
+    logging.basicConfig(level=logging.INFO)
+
+    class WebhookPayload(BaseModel):
+        job_id: str
+        status: str
+        progress: int
+        file_name: str
+        result_url: str = None
+        error_message: str = None
+        metadata: dict = {}
+
+    @app.post("/webhook/document-complete")
+    async def webhook_handler(payload: WebhookPayload, background_tasks: BackgroundTasks):
+        logging.info(f"Job {payload.job_id} completed with status: {payload.status}")
+        
+        if payload.status == 'completed':
+            # Process in background
+            background_tasks.add_task(process_completed_job, payload)
+        elif payload.status == 'failed':
+            background_tasks.add_task(handle_job_failure, payload.job_id, payload.error_message)
+        
+        return {"status": "received"}
+
+    async def process_completed_job(payload: WebhookPayload):
+        """Process completed job in background"""
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(payload.result_url)
+                if response.status_code == 200:
+                    content = response.text
+                    logging.info(f"Downloaded content for job {payload.job_id}")
+                    await process_document(payload.job_id, content)
+                else:
+                    logging.error(f"Failed to download result for job {payload.job_id}")
+            except Exception as e:
+                logging.error(f"Error processing job {payload.job_id}: {e}")
+
+    async def process_document(job_id: str, content: str):
+        """Process the converted document"""
+        logging.info(f"Processing document for job {job_id}")
+        # Your document processing logic here
+        
+    async def handle_job_failure(job_id: str, error: str):
+        """Handle job failure"""
+        logging.error(f"Job {job_id} failed: {error}")
+        # Your error handling logic here
+    ```
+  </Tab>
+</Tabs>
+
+## Webhook Security
+
+<Warning>
+  Always validate webhook requests to ensure they come from your Document Converter instance.
+</Warning>
+
+<Tabs>
+  <Tab title="IP Allowlist">
+    ```python
+    from flask import Flask, request, abort
+    import ipaddress
+
+    app = Flask(__name__)
+
+    # Allow only specific IP addresses
+    ALLOWED_IPS = ['127.0.0.1', '10.0.0.0/8', '192.168.0.0/16']
+
+    def is_allowed_ip(ip):
+        for allowed in ALLOWED_IPS:
+            if '/' in allowed:
+                if ipaddress.ip_address(ip) in ipaddress.ip_network(allowed):
+                    return True
+            else:
+                if ip == allowed:
+                    return True
+        return False
+
+    @app.before_request
+    def limit_remote_addr():
+        if not is_allowed_ip(request.remote_addr):
+            abort(403)  # Forbidden
+    ```
+  </Tab>
+  
+  <Tab title="HMAC Signature">
+    ```python
+    import hmac
+    import hashlib
+    from flask import Flask, request, abort
+
+    app = Flask(__name__)
+
+    WEBHOOK_SECRET = 'your-webhook-secret-key'
+
+    def verify_signature(payload, signature):
+        expected_signature = hmac.new(
+            WEBHOOK_SECRET.encode('utf-8'),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(f'sha256={expected_signature}', signature)
+
+    @app.route('/webhook/document-complete', methods=['POST'])
+    def webhook_handler():
+        signature = request.headers.get('X-Webhook-Signature')
+        if not signature:
+            abort(403)
+        
+        payload = request.get_data()
+        if not verify_signature(payload, signature):
+            abort(403)
+        
+        # Process webhook
+        job = request.json
+        # ... handle job
+        
+        return {'status': 'received'}
+    ```
+  </Tab>
+  
+  <Tab title="API Key Authentication">
+    ```python
+    from flask import Flask, request, abort
+
+    app = Flask(__name__)
+
+    API_KEY = 'your-api-key'
+
+    @app.route('/webhook/document-complete', methods=['POST'])
+    def webhook_handler():
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or auth_header != f'Bearer {API_KEY}':
+            abort(401)
+        
+        # Process webhook
+        job = request.json
+        # ... handle job
+        
+        return {'status': 'received'}
+    ```
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Webhook Delivery Failures">
+    If webhook delivery fails, the system will retry up to 3 times with exponential backoff:
+    
+    - **First retry**: After 1 second
+    - **Second retry**: After 4 seconds  
+    - **Third retry**: After 16 seconds
+    
+    After all retries fail, the webhook is marked as failed and no further attempts are made.
+  </Accordion>
+  
+  <Accordion title="Timeout Handling">
+    Webhooks have a default timeout of 30 seconds. Your endpoint should respond quickly:
+    
+    ```python
+    @app.route('/webhook/document-complete', methods=['POST'])
+    def webhook_handler():
+        job = request.json
+        
+        # Respond immediately
+        response = {'status': 'received'}
+        
+        # Process in background
+        background_tasks.add_task(process_job, job)
+        
+        return response
+    ```
+  </Accordion>
+  
+  <Accordion title="Malformed Payloads">
+    Always validate incoming webhook payloads:
+    
+    ```python
+    @app.route('/webhook/document-complete', methods=['POST'])
+    def webhook_handler():
+        try:
+            job = request.json
+            
+            # Validate required fields
+            required_fields = ['job_id', 'status', 'progress']
+            for field in required_fields:
+                if field not in job:
+                    return {'error': f'Missing field: {field}'}, 400
+            
+            # Process valid payload
+            process_job(job)
+            
+        except Exception as e:
+            logging.error(f"Webhook processing error: {e}")
+            return {'error': 'Invalid payload'}, 400
+        
+        return {'status': 'received'}
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Webhooks
+
+<Tabs>
+  <Tab title="Local Testing">
+    Use tools like ngrok to expose your local webhook endpoint:
+    
+    ```bash
+    # Install ngrok
+    npm install -g ngrok
+    
+    # Start your webhook server
+    python webhook_server.py
+    
+    # Expose localhost:5000 to the internet
+    ngrok http 5000
+    
+    # Use the ngrok URL in your webhook configuration
+    # https://abc123.ngrok.io/webhook/document-complete
+    ```
+  </Tab>
+  
+  <Tab title="Webhook Testing Tool">
+    Create a simple test endpoint to inspect payloads:
+    
+    ```python
+    from flask import Flask, request
+    import json
+
+    app = Flask(__name__)
+
+    @app.route('/webhook/test', methods=['POST'])
+    def test_webhook():
+        payload = request.json
+        
+        print("Received webhook:")
+        print(json.dumps(payload, indent=2))
+        
+        # Log to file
+        with open('webhook_log.json', 'a') as f:
+            f.write(json.dumps(payload) + '\n')
+        
+        return {'status': 'received'}
+
+    if __name__ == '__main__':
+        app.run(port=5000, debug=True)
+    ```
+  </Tab>
+  
+  <Tab title="Unit Testing">
+    Test your webhook handler logic:
+    
+    ```python
+    import unittest
+    from unittest.mock import patch
+    from your_webhook_app import app
+
+    class TestWebhookHandler(unittest.TestCase):
+        def setUp(self):
+            self.app = app.test_client()
+            self.app.testing = True
+
+        def test_successful_webhook(self):
+            payload = {
+                "job_id": "test-123",
+                "status": "completed",
+                "progress": 100,
+                "result_url": "http://example.com/result"
+            }
+            
+            response = self.app.post('/webhook/document-complete', json=payload)
+            
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json['status'], 'received')
+
+        def test_failed_webhook(self):
+            payload = {
+                "job_id": "test-456",
+                "status": "failed",
+                "error_message": "Conversion failed"
+            }
+            
+            response = self.app.post('/webhook/document-complete', json=payload)
+            
+            self.assertEqual(response.status_code, 200)
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Idempotency" icon="refresh">
+    Make your webhook handler idempotent - it should handle duplicate deliveries gracefully by checking if the job was already processed.
+  </Card>
+  <Card title="Fast Response" icon="zap">
+    Respond to webhooks quickly (< 5 seconds) to avoid timeouts. Process heavy operations in background tasks.
+  </Card>
+  <Card title="Proper Status Codes" icon="check-circle">
+    Return appropriate HTTP status codes (200 for success, 4xx for client errors, 5xx for server errors).
+  </Card>
+  <Card title="Error Logging" icon="file-text">
+    Log all webhook events and errors for debugging and monitoring purposes.
+  </Card>
+</CardGroup>
+
+## Monitoring Webhooks
+
+<CodeGroup>
+
+```python Webhook Monitoring
+import logging
+import time
+from collections import defaultdict
+
+# Track webhook metrics
+webhook_metrics = defaultdict(int)
+
+@app.route('/webhook/document-complete', methods=['POST'])
+def webhook_handler():
+    start_time = time.time()
+    
+    try:
+        job = request.json
+        
+        # Process webhook
+        process_job(job)
+        
+        # Track success
+        webhook_metrics['success'] += 1
+        
+    except Exception as e:
+        webhook_metrics['error'] += 1
+        logging.error(f"Webhook error: {e}")
+        
+    finally:
+        # Track processing time
+        processing_time = time.time() - start_time
+        webhook_metrics['total_time'] += processing_time
+        webhook_metrics['count'] += 1
+        
+        # Log metrics periodically
+        if webhook_metrics['count'] % 100 == 0:
+            avg_time = webhook_metrics['total_time'] / webhook_metrics['count']
+            logging.info(f"Webhook metrics: {dict(webhook_metrics)}, avg_time: {avg_time:.2f}s")
+    
+    return {'status': 'received'}
+```
+
+```python Health Check Endpoint
+@app.route('/webhook/health', methods=['GET'])
+def webhook_health():
+    return {
+        'status': 'healthy',
+        'metrics': dict(webhook_metrics),
+        'timestamp': time.time()
+    }
+```
+
+</CodeGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Webhook Not Receiving Data">
+    **Causes:**
+    - Firewall blocking incoming requests
+    - Incorrect URL or endpoint
+    - SSL/TLS certificate issues
+    - Server not running
+    
+    **Solutions:**
+    - Test with curl or Postman
+    - Check firewall rules
+    - Verify SSL certificate
+    - Use ngrok for local testing
+  </Accordion>
+  
+  <Accordion title="Webhook Timeouts">
+    **Causes:**
+    - Slow processing in webhook handler
+    - Database or external API calls
+    - Large file downloads
+    
+    **Solutions:**
+    - Process in background tasks
+    - Return response immediately
+    - Implement proper timeout handling
+    - Use async processing
+  </Accordion>
+  
+  <Accordion title="Duplicate Webhooks">
+    **Causes:**
+    - Network issues causing retries
+    - Server errors during processing
+    - Multiple webhook URLs configured
+    
+    **Solutions:**
+    - Implement idempotency checks
+    - Use unique job IDs
+    - Store processed webhook IDs
+    - Return proper HTTP status codes
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="API Integration"
+    icon="code"
+    href="/api-reference/introduction"
+  >
+    Learn more about the complete API
+  </Card>
+  <Card
+    title="Examples"
+    icon="book"
+    href="/examples/webhook-integration"
+  >
+    See complete webhook integration examples
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy webhooks in production
+  </Card>
+  <Card
+    title="Monitoring"
+    icon="chart-line"
+    href="/advanced/monitoring"
+  >
+    Monitor webhook performance
+  </Card>
+</CardGroup>

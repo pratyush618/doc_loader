@@ -1,0 +1,563 @@
+---
+title: Setup & Installation
+description: 'Detailed setup instructions for different environments'
+---
+
+## System Requirements
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    Python 3.12 or higher required
+  </Card>
+  <Card title="Memory" icon="memory">
+    Minimum 2GB RAM, 4GB+ recommended
+  </Card>
+  <Card title="Storage" icon="hard-drive">
+    1GB for models, additional space for processing
+  </Card>
+  <Card title="Redis" icon="database">
+    Redis 6.0+ for job queue and storage
+  </Card>
+</CardGroup>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Docker (Recommended)">
+    The easiest way to get started is with Docker Compose:
+
+    <Steps>
+      <Step title="Clone Repository">
+        ```bash
+        git clone https://github.com/example/doc-converter.git
+        cd doc-converter
+        ```
+      </Step>
+      
+      <Step title="Configure Environment">
+        ```bash
+        cp .env.example .env
+        ```
+        
+        Edit the `.env` file:
+        ```bash
+        # Basic Configuration
+        REDIS_URL=redis://redis:6379/0
+        MAX_FILE_SIZE=104857600  # 100MB
+        
+        # OCR Configuration (optional)
+        MISTRAL_API_KEY=your_api_key_here
+        EASY_OCR_USE_GPU=false
+        PADDLE_OCR_USE_GPU=false
+        
+        # Storage
+        UPLOAD_DIR=./uploads
+        OUTPUT_DIR=./outputs
+        ```
+      </Step>
+      
+      <Step title="Start Services">
+        ```bash
+        docker-compose up -d
+        ```
+        
+        This starts:
+        - API server on port 8000
+        - Redis server
+        - Celery worker
+        - Health monitoring
+      </Step>
+      
+      <Step title="Verify Installation">
+        ```bash
+        curl http://localhost:8000/api/v1/health
+        ```
+        
+        Expected response:
+        ```json
+        {
+          "status": "healthy",
+          "timestamp": "2024-01-15T10:30:00Z",
+          "version": "1.0.0"
+        }
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="uv (Development)">
+    For development with the fast `uv` package manager:
+
+    <Steps>
+      <Step title="Install uv">
+        <CodeGroup>
+          ```bash Windows
+          winget install --id=astral-sh.uv -e
+          ```
+          
+          ```bash macOS
+          brew install uv
+          ```
+          
+          ```bash Linux
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          ```
+        </CodeGroup>
+      </Step>
+      
+      <Step title="Setup Project">
+        ```bash
+        git clone https://github.com/example/doc-converter.git
+        cd doc-converter
+        uv sync  # Creates virtual environment and installs dependencies
+        ```
+      </Step>
+      
+      <Step title="Configure Environment">
+        ```bash
+        cp .env.example .env
+        # Edit .env file as needed
+        ```
+      </Step>
+      
+      <Step title="Start Redis">
+        <CodeGroup>
+          ```bash macOS
+          brew services start redis
+          ```
+          
+          ```bash Linux
+          sudo systemctl start redis
+          ```
+          
+          ```bash Windows
+          # Install Redis from https://redis.io/download
+          redis-server
+          ```
+        </CodeGroup>
+      </Step>
+      
+      <Step title="Run Services">
+        ```bash
+        # Terminal 1: API Server
+        uv run python run_api.py
+        
+        # Terminal 2: Worker
+        uv run python run_worker.py
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="pip (Traditional)">
+    Traditional Python installation:
+
+    <Steps>
+      <Step title="Create Virtual Environment">
+        ```bash
+        python -m venv venv
+        
+        # Activate virtual environment
+        # Windows
+        venv\Scripts\activate
+        
+        # macOS/Linux
+        source venv/bin/activate
+        ```
+      </Step>
+      
+      <Step title="Install Dependencies">
+        ```bash
+        pip install -r requirements.txt
+        ```
+      </Step>
+      
+      <Step title="Setup Environment">
+        ```bash
+        cp .env.example .env
+        # Configure .env file
+        ```
+      </Step>
+      
+      <Step title="Start Services">
+        ```bash
+        # Start Redis first
+        redis-server
+        
+        # Then start API and worker
+        python run_api.py  # Terminal 1
+        python run_worker.py  # Terminal 2
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Environment Configuration
+
+<AccordionGroup>
+  <Accordion title="Application Settings">
+    ```bash
+    # Application
+    APP_NAME=doc-converter
+    APP_ENV=production
+    DEBUG=false
+    
+    # API Configuration
+    API_HOST=0.0.0.0
+    API_PORT=8000
+    API_PREFIX=/api/v1
+    
+    # Security
+    SECRET_KEY=your-secret-key-here
+    ALLOWED_ORIGINS=*
+    ```
+  </Accordion>
+  
+  <Accordion title="Redis Configuration">
+    ```bash
+    # Redis Connection
+    REDIS_URL=redis://localhost:6379/0
+    
+    # Celery Configuration
+    CELERY_BROKER_URL=redis://localhost:6379/0
+    CELERY_RESULT_BACKEND=redis://localhost:6379/0
+    CELERY_TASK_SERIALIZER=json
+    CELERY_RESULT_SERIALIZER=json
+    CELERY_ACCEPT_CONTENT=["json"]
+    CELERY_TIMEZONE=UTC
+    ```
+  </Accordion>
+  
+  <Accordion title="File Storage">
+    ```bash
+    # Storage Paths
+    UPLOAD_DIR=./uploads
+    OUTPUT_DIR=./outputs
+    
+    # File Limits
+    MAX_FILE_SIZE=104857600  # 100MB in bytes
+    FILE_TTL_HOURS=24  # How long to keep files
+    
+    # Image Processing
+    IMAGE_COMPRESSION_QUALITY=95
+    IMAGE_MAX_WIDTH=2048
+    IMAGE_MAX_HEIGHT=2048
+    ```
+  </Accordion>
+  
+  <Accordion title="OCR Providers">
+    ```bash
+    # PaddleOCR
+    PADDLE_OCR_USE_GPU=false
+    PADDLE_OCR_LANG=en
+    PADDLE_MODELS_DIR=./models/paddle_models
+    
+    # EasyOCR
+    EASY_OCR_USE_GPU=false
+    EASY_OCR_LANG=en
+    EASY_OCR_MODEL_STORAGE=./models/easy_ocr_models
+    EASY_OCR_TEXT_THRESHOLD=0.7
+    EASY_OCR_LINK_THRESHOLD=0.4
+    EASY_OCR_LOW_TEXT=0.4
+    
+    # Mistral AI
+    MISTRAL_API_KEY=your_api_key_here
+    MISTRAL_API_URL=https://api.mistral.ai/v1/chat/completions
+    MISTRAL_MODEL=pixtral-12b-2409
+    ```
+  </Accordion>
+  
+  <Accordion title="Webhook Settings">
+    ```bash
+    # Webhook Configuration
+    DEFAULT_WEBHOOK_URL=https://your-site.com/webhook
+    WEBHOOK_TIMEOUT=30
+    WEBHOOK_MAX_RETRIES=3
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Model Downloads
+
+The application will automatically download required models on first use:
+
+<CardGroup cols={3}>
+  <Card title="PaddleOCR Models" icon="download">
+    Downloaded to `./models/paddle_models/`
+    
+    Size: ~200MB
+  </Card>
+  <Card title="EasyOCR Models" icon="download">
+    Downloaded to `./models/easy_ocr_models/`
+    
+    Size: ~150MB per language
+  </Card>
+  <Card title="Mistral AI" icon="cloud">
+    API-based, no local models
+    
+    Requires API key
+  </Card>
+</CardGroup>
+
+## Verification
+
+After installation, verify everything is working:
+
+<Steps>
+  <Step title="Health Check">
+    ```bash
+    curl http://localhost:8000/api/v1/health
+    ```
+    
+    Should return:
+    ```json
+    {
+      "status": "healthy",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "version": "1.0.0"
+    }
+    ```
+  </Step>
+  
+  <Step title="Readiness Check">
+    ```bash
+    curl http://localhost:8000/api/v1/ready
+    ```
+    
+    Should return:
+    ```json
+    {
+      "status": "ready",
+      "services": {
+        "redis": true,
+        "celery": true
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Test Conversion">
+    ```bash
+    # Create a test file
+    echo "Hello, World!" > test.txt
+    
+    # Convert it
+    curl -X POST "http://localhost:8000/api/v1/jobs" \
+      -F "file=@test.txt" \
+      -F "output_format=md"
+    ```
+    
+    Should return job details with a valid ID.
+  </Step>
+</Steps>
+
+## Platform-Specific Notes
+
+<Tabs>
+  <Tab title="Windows">
+    **Prerequisites:**
+    - Windows 10/11 or Windows Server 2019+
+    - Visual Studio Build Tools (for some dependencies)
+    - Redis for Windows (or use Docker)
+
+    **Common Issues:**
+    - PyTorch installation may require specific versions
+    - Use `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu` for CPU-only
+    - EasyOCR may have compatibility issues - PaddleOCR is recommended
+
+    **Performance Tips:**
+    - Use WSL2 for better performance
+    - Consider Docker Desktop for easier Redis setup
+  </Tab>
+  
+  <Tab title="macOS">
+    **Prerequisites:**
+    - macOS 10.15+ (Catalina or later)
+    - Xcode Command Line Tools: `xcode-select --install`
+    - Homebrew for package management
+
+    **Installation Commands:**
+    ```bash
+    # Install system dependencies
+    brew install redis python@3.12
+    
+    # Start Redis
+    brew services start redis
+    ```
+
+    **M1/M2 Macs:**
+    - Use native ARM builds when available
+    - Some ML dependencies may require Rosetta 2
+  </Tab>
+  
+  <Tab title="Linux">
+    **Prerequisites:**
+    - Ubuntu 20.04+ / CentOS 8+ / Debian 11+
+    - Python 3.12+ development headers
+    - Redis server
+
+    **Ubuntu/Debian:**
+    ```bash
+    sudo apt update
+    sudo apt install python3.12 python3.12-dev python3.12-venv
+    sudo apt install redis-server
+    sudo systemctl start redis
+    sudo systemctl enable redis
+    ```
+
+    **CentOS/RHEL:**
+    ```bash
+    sudo dnf install python3.12 python3.12-devel
+    sudo dnf install redis
+    sudo systemctl start redis
+    sudo systemctl enable redis
+    ```
+  </Tab>
+</Tabs>
+
+## Performance Optimization
+
+<CardGroup cols={2}>
+  <Card title="CPU Optimization" icon="microchip">
+    ```bash
+    # Set CPU-specific optimizations
+    export OMP_NUM_THREADS=4
+    export MKL_NUM_THREADS=4
+    
+    # For production
+    export CELERY_WORKER_CONCURRENCY=2
+    ```
+  </Card>
+  <Card title="Memory Management" icon="memory">
+    ```bash
+    # Limit memory usage
+    export MALLOC_ARENA_MAX=2
+    
+    # For containers
+    export CELERY_WORKER_MAX_MEMORY_PER_CHILD=500000
+    ```
+  </Card>
+  <Card title="GPU Acceleration" icon="gpu">
+    ```bash
+    # Enable GPU for OCR (if available)
+    EASY_OCR_USE_GPU=true
+    PADDLE_OCR_USE_GPU=true
+    
+    # Requires CUDA installation
+    ```
+  </Card>
+  <Card title="File System" icon="folder">
+    ```bash
+    # Use SSD for better performance
+    UPLOAD_DIR=/fast/storage/uploads
+    OUTPUT_DIR=/fast/storage/outputs
+    
+    # Clean up old files
+    FILE_TTL_HOURS=12
+    ```
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Redis Connection Issues">
+    **Symptoms:** `redis.exceptions.ConnectionError`
+    
+    **Solutions:**
+    1. Check if Redis is running: `redis-cli ping`
+    2. Verify Redis URL in `.env`
+    3. Check firewall settings
+    4. For Docker: ensure Redis container is running
+    
+    ```bash
+    # Test Redis connection
+    redis-cli -u $REDIS_URL ping
+    ```
+  </Accordion>
+  
+  <Accordion title="OCR Installation Problems">
+    **Symptoms:** OCR providers fail to initialize
+    
+    **Solutions:**
+    1. **EasyOCR**: Often PyTorch compatibility issues
+       ```bash
+       pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+       ```
+    
+    2. **PaddleOCR**: Model download issues
+       ```bash
+       # Pre-download models
+       python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='en')"
+       ```
+    
+    3. **Mistral**: API key issues
+       ```bash
+       # Test API key
+       curl -H "Authorization: Bearer $MISTRAL_API_KEY" https://api.mistral.ai/v1/models
+       ```
+  </Accordion>
+  
+  <Accordion title="File Upload Errors">
+    **Symptoms:** 413 Request Entity Too Large
+    
+    **Solutions:**
+    1. Increase file size limit in `.env`
+    2. Check web server limits (nginx, Apache)
+    3. Verify disk space
+    
+    ```bash
+    # Check current limits
+    curl -v http://localhost:8000/api/v1/health
+    ```
+  </Accordion>
+  
+  <Accordion title="Memory Issues">
+    **Symptoms:** Worker crashes, out of memory errors
+    
+    **Solutions:**
+    1. Reduce worker concurrency
+    2. Increase system memory
+    3. Enable memory limits
+    
+    ```bash
+    # Monitor memory usage
+    docker stats  # For Docker
+    htop  # For native installation
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Test Your Installation"
+    icon="flask"
+    href="/quickstart#your-first-conversion"
+  >
+    Run your first document conversion
+  </Card>
+  <Card
+    title="Configure OCR"
+    icon="eye"
+    href="/features/ocr"
+  >
+    Set up OCR providers for better text extraction
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy to production with monitoring
+  </Card>
+  <Card
+    title="API Documentation"
+    icon="book"
+    href="/api-reference"
+  >
+    Explore the complete API reference
+  </Card>
+</CardGroup>

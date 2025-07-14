@@ -1,0 +1,523 @@
+---
+title: Document Conversion
+description: 'Supported formats and conversion features'
+---
+
+The Document Converter supports a wide range of input formats and provides flexible output options to meet your needs.
+
+## Supported Input Formats
+
+<CardGroup cols={2}>
+  <Card title="Documents" icon="file-text">
+    - **PDF**: Portable Document Format (.pdf)
+    - **Word**: Microsoft Word (.docx) 
+    - **RTF**: Rich Text Format (.rtf)
+    - **Text**: Plain text (.txt), Markdown (.md), Log files
+  </Card>
+  <Card title="Presentations" icon="presentation">
+    - **PowerPoint**: .pptx, .pptm, .potx, .potm
+    - **OpenDocument**: .odp (planned)
+    - **Google Slides**: Via export (planned)
+  </Card>
+  <Card title="Spreadsheets" icon="table">
+    - **Excel**: .xlsx, .xlsm, .xls
+    - **CSV**: Comma-separated values (.csv)
+    - **OpenDocument**: .ods (planned)
+  </Card>
+  <Card title="Images" icon="image">
+    - **Raster**: PNG, JPEG, GIF, BMP, WebP, ICO, TIFF
+    - **Vector**: SVG (planned)
+    - **Requires OCR** for text extraction
+  </Card>
+</CardGroup>
+
+## Output Formats
+
+<Tabs>
+  <Tab title="Markdown">
+    **Human-readable format** with embedded images
+
+    **Features:**
+    - Preserves document structure with headers
+    - Maintains formatting (bold, italic, lists)
+    - Embeds images as base64 data URLs
+    - Compatible with documentation systems
+    - Easy to read and edit
+
+    **Example Output:**
+    ```markdown
+    # Document Title
+
+    ## Section 1
+
+    This is a paragraph with **bold** and *italic* text.
+
+    - List item 1
+    - List item 2
+    - List item 3
+
+    ![Image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ...)
+
+    ## Section 2
+
+    More content here...
+    ```
+
+    **Use Cases:**
+    - Documentation generation
+    - Content management systems
+    - Static site generators
+    - Wiki systems
+    - README files
+  </Tab>
+  
+  <Tab title="JSON">
+    **Structured data** preserving document hierarchy
+
+    **Features:**
+    - Maintains original document structure
+    - Programmatically accessible
+    - Includes metadata and images
+    - Type-specific formatting
+    - Supports complex data extraction
+
+    **Example Output:**
+    ```json
+    {
+      "document": {
+        "filename": "report.pdf",
+        "title": "Annual Report",
+        "type": "PDF Document",
+        "metadata": {
+          "pages": 25,
+          "author": "John Doe",
+          "created": "2024-01-15T10:30:00Z"
+        }
+      },
+      "content": {
+        "type": "multi_page_document",
+        "total_pages": 25,
+        "pages": [
+          {
+            "page_number": 1,
+            "text": "Page content...",
+            "word_count": 245
+          }
+        ]
+      },
+      "images": {
+        "chart1.png": "base64_image_data"
+      }
+    }
+    ```
+
+    **Use Cases:**
+    - Data extraction pipelines
+    - Search indexing
+    - Content analysis
+    - Database import
+    - API integration
+  </Tab>
+</Tabs>
+
+## Format-Specific Features
+
+<AccordionGroup>
+  <Accordion title="PDF Processing">
+    **Capabilities:**
+    - Multi-page document extraction
+    - Table detection and extraction
+    - Image extraction with OCR
+    - Metadata preservation (author, creation date)
+    - Bookmark and outline preservation
+    
+    **Limitations:**
+    - Scanned PDFs require OCR
+    - Complex layouts may need manual review
+    - Password-protected PDFs not supported
+    - Some fonts may not render correctly
+    
+    **Configuration:**
+    ```bash
+    # Enable OCR for scanned PDFs
+    use_ocr=true
+    ocr_provider=paddle
+    ```
+  </Accordion>
+  
+  <Accordion title="Word Document Processing">
+    **Capabilities:**
+    - Heading hierarchy preservation
+    - Table extraction
+    - Image and embedded object handling
+    - Style and formatting preservation
+    - Comments and track changes (basic)
+    
+    **Supported Elements:**
+    - Paragraphs and headings
+    - Lists (bulleted and numbered)
+    - Tables with headers
+    - Images and shapes
+    - Headers and footers
+    
+    **Example Structure:**
+    ```json
+    {
+      "content": {
+        "type": "structured_document",
+        "sections": [
+          {
+            "heading": "Introduction",
+            "level": 1,
+            "content": "Document introduction..."
+          }
+        ]
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="PowerPoint Processing">
+    **Capabilities:**
+    - Slide-by-slide extraction
+    - Title and content separation
+    - Speaker notes extraction
+    - Image and media handling
+    - Slide layout preservation
+    
+    **Slide Elements:**
+    - Slide titles and subtitles
+    - Bullet points and lists
+    - Text boxes and shapes
+    - Images and charts
+    - Tables and diagrams
+    
+    **JSON Structure:**
+    ```json
+    {
+      "content": {
+        "type": "presentation",
+        "slides": [
+          {
+            "slide_number": 1,
+            "title": "Slide Title",
+            "content": "Slide content...",
+            "notes": "Speaker notes..."
+          }
+        ]
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Excel Processing">
+    **Capabilities:**
+    - Multi-sheet workbook support
+    - Table and data extraction
+    - Formula preservation (as text)
+    - Chart and graph handling
+    - Metadata extraction
+    
+    **Data Handling:**
+    - Header row detection
+    - Data type inference
+    - Empty cell handling
+    - Large dataset sampling
+    
+    **Sample Output:**
+    ```json
+    {
+      "content": {
+        "type": "spreadsheet",
+        "sheets": [
+          {
+            "name": "Sales Data",
+            "headers": ["Date", "Product", "Amount"],
+            "sample_data": [
+              ["2024-01-01", "Widget A", "150.00"],
+              ["2024-01-02", "Widget B", "200.00"]
+            ],
+            "total_rows": 1000
+          }
+        ]
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Image Processing">
+    **Capabilities:**
+    - OCR text extraction
+    - Image format standardization
+    - Compression and optimization
+    - Metadata preservation
+    - Multi-language support
+    
+    **OCR Providers:**
+    - **PaddleOCR**: High accuracy, 80+ languages
+    - **EasyOCR**: Simple setup, good performance
+    - **Mistral AI**: AI-powered, context-aware
+    
+    **Image Optimization:**
+    ```bash
+    # Configuration
+    IMAGE_COMPRESSION_QUALITY=95
+    IMAGE_MAX_WIDTH=2048
+    IMAGE_MAX_HEIGHT=2048
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Conversion Quality
+
+<CardGroup cols={3}>
+  <Card title="High Quality" icon="star">
+    **Text documents**, **Modern Office files**
+    
+    99%+ accuracy for text extraction
+  </Card>
+  <Card title="Good Quality" icon="thumbs-up">
+    **PDFs with standard fonts**, **Simple layouts**
+    
+    95%+ accuracy with proper formatting
+  </Card>
+  <Card title="Variable Quality" icon="exclamation">
+    **Scanned documents**, **Complex layouts**, **Images**
+    
+    Depends on OCR quality and image resolution
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Steps>
+  <Step title="Choose the Right Format">
+    - Use **Markdown** for documentation and content management
+    - Use **JSON** for data processing and API integration
+    - Consider your downstream processing needs
+  </Step>
+  
+  <Step title="Optimize for OCR">
+    - Use high-resolution images (300+ DPI)
+    - Ensure good contrast and lighting
+    - Avoid skewed or rotated text
+    - Choose appropriate OCR provider
+  </Step>
+  
+  <Step title="Handle Large Files">
+    - Monitor file size limits
+    - Consider chunking very large documents
+    - Use appropriate timeout settings
+    - Implement progress monitoring
+  </Step>
+  
+  <Step title="Validate Results">
+    - Review converted content for accuracy
+    - Test with representative documents
+    - Implement quality checks in your pipeline
+    - Monitor conversion success rates
+  </Step>
+</Steps>
+
+## File Size Limits
+
+<Warning>
+  Default maximum file size is **100MB**. This can be configured via the `MAX_FILE_SIZE` environment variable.
+</Warning>
+
+| File Type | Recommended Size | Maximum Size |
+|-----------|------------------|--------------|
+| Text files | < 10MB | 100MB |
+| PDFs | < 50MB | 100MB |
+| Images | < 20MB | 100MB |
+| Office files | < 30MB | 100MB |
+
+## Performance Considerations
+
+<CardGroup cols={2}>
+  <Card title="Processing Time" icon="clock">
+    - **Text files**: < 1 second
+    - **Simple PDFs**: 2-10 seconds
+    - **Complex documents**: 30-60 seconds
+    - **OCR processing**: 1-5 minutes
+  </Card>
+  <Card title="Resource Usage" icon="server">
+    - **CPU**: High during OCR processing
+    - **Memory**: 500MB-2GB per job
+    - **Storage**: 2-3x original file size
+    - **Network**: Minimal for local processing
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+Common conversion errors and solutions:
+
+<AccordionGroup>
+  <Accordion title="Unsupported Format">
+    **Error**: "No suitable converter found"
+    
+    **Solution**: 
+    - Check file extension and MIME type
+    - Verify file is not corrupted
+    - Convert to supported format first
+  </Accordion>
+  
+  <Accordion title="Corrupted File">
+    **Error**: "Failed to read file"
+    
+    **Solution**:
+    - Verify file integrity
+    - Try opening in original application
+    - Re-export or re-save the file
+  </Accordion>
+  
+  <Accordion title="Memory Issues">
+    **Error**: "Out of memory"
+    
+    **Solution**:
+    - Reduce file size
+    - Increase system memory
+    - Process in smaller chunks
+  </Accordion>
+  
+  <Accordion title="OCR Failures">
+    **Error**: "OCR extraction failed"
+    
+    **Solution**:
+    - Try different OCR provider
+    - Improve image quality
+    - Check language settings
+  </Accordion>
+</AccordionGroup>
+
+## Integration Examples
+
+<CodeGroup>
+
+```python Python
+import requests
+
+# Convert a document
+response = requests.post(
+    'http://localhost:8000/api/v1/jobs',
+    files={'file': open('document.pdf', 'rb')},
+    data={'output_format': 'json'}
+)
+
+job = response.json()
+print(f"Job ID: {job['id']}")
+
+# Monitor progress
+while True:
+    status = requests.get(f"http://localhost:8000/api/v1/jobs/{job['id']}")
+    job_status = status.json()
+    
+    if job_status['status'] == 'completed':
+        # Download result
+        result = requests.get(f"http://localhost:8000/api/v1/jobs/{job['id']}/result")
+        with open('converted.json', 'w') as f:
+            f.write(result.text)
+        break
+```
+
+```javascript Node.js
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
+
+async function convertDocument(filePath) {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath));
+    form.append('output_format', 'md');
+    
+    try {
+        const response = await axios.post('http://localhost:8000/api/v1/jobs', form, {
+            headers: form.getHeaders()
+        });
+        
+        const jobId = response.data.id;
+        console.log(`Job created: ${jobId}`);
+        
+        // Poll for completion
+        while (true) {
+            const status = await axios.get(`http://localhost:8000/api/v1/jobs/${jobId}`);
+            
+            if (status.data.status === 'completed') {
+                const result = await axios.get(`http://localhost:8000/api/v1/jobs/${jobId}/result`);
+                fs.writeFileSync('converted.md', result.data);
+                break;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        console.error('Conversion failed:', error.response?.data || error.message);
+    }
+}
+
+convertDocument('document.pdf');
+```
+
+```bash cURL
+#!/bin/bash
+
+# Convert document
+RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v1/jobs" \
+  -F "file=@document.pdf" \
+  -F "output_format=md")
+
+JOB_ID=$(echo $RESPONSE | jq -r '.id')
+echo "Job created: $JOB_ID"
+
+# Poll for completion
+while true; do
+  STATUS=$(curl -s "http://localhost:8000/api/v1/jobs/$JOB_ID" | jq -r '.status')
+  
+  if [ "$STATUS" = "completed" ]; then
+    echo "Conversion completed"
+    curl -s "http://localhost:8000/api/v1/jobs/$JOB_ID/result" -o converted.md
+    break
+  elif [ "$STATUS" = "failed" ]; then
+    echo "Conversion failed"
+    break
+  fi
+  
+  sleep 1
+done
+```
+
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Configure OCR"
+    icon="eye"
+    href="/features/ocr"
+  >
+    Set up OCR providers for image processing
+  </Card>
+  <Card
+    title="Output Formats"
+    icon="file-code"
+    href="/features/output-formats"
+  >
+    Learn about JSON structure and Markdown features
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="webhook"
+    href="/features/webhooks"
+  >
+    Set up real-time notifications
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference"
+  >
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

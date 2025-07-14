@@ -1,0 +1,589 @@
+---
+title: Health API
+description: 'Health check and readiness endpoints'
+---
+
+## Overview
+
+The Health API provides endpoints to check the application's health status and readiness, essential for monitoring and load balancing in production environments.
+
+## Health Check
+
+<api-endpoint method="GET" path="/api/v1/health">
+  Basic health check endpoint that returns the application's operational status.
+</api-endpoint>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  Health status of the application
+  
+  **Values:** `healthy`, `unhealthy`
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Current timestamp in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="version" type="string" required>
+  Application version
+</ResponseField>
+
+<ResponseField name="uptime" type="number">
+  Application uptime in seconds
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/health"
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8000/api/v1/health")
+health = response.json()
+
+print(f"Status: {health['status']}")
+print(f"Version: {health['version']}")
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/health');
+const health = await response.json();
+
+console.log('Status:', health.status);
+console.log('Version:', health.version);
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "version": "1.0.0",
+  "uptime": 3600
+}
+```
+
+<Info>
+  This endpoint always returns `200 OK` if the application is running. Use the readiness endpoint for dependency checks.
+</Info>
+
+## Readiness Check
+
+<api-endpoint method="GET" path="/api/v1/ready">
+  Comprehensive readiness check that validates all dependencies.
+</api-endpoint>
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  Readiness status of the application
+  
+  **Values:** `ready`, `not ready`
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Current timestamp in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="services" type="object" required>
+  Status of individual service dependencies
+</ResponseField>
+
+<ResponseField name="services.redis" type="boolean" required>
+  Redis connection status
+</ResponseField>
+
+<ResponseField name="services.celery" type="boolean" required>
+  Celery worker availability
+</ResponseField>
+
+<ResponseField name="services.storage" type="boolean">
+  File storage system status
+</ResponseField>
+
+<ResponseField name="services.ocr" type="object">
+  OCR providers availability
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "http://localhost:8000/api/v1/ready"
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8000/api/v1/ready")
+readiness = response.json()
+
+if readiness['status'] == 'ready':
+    print("Application is ready")
+else:
+    print("Application is not ready")
+    print("Service status:", readiness['services'])
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/ready');
+const readiness = await response.json();
+
+if (readiness.status === 'ready') {
+    console.log('Application is ready');
+} else {
+    console.log('Application is not ready');
+    console.log('Service status:', readiness.services);
+}
+```
+
+</CodeGroup>
+
+### Response Examples
+
+<Tabs>
+  <Tab title="Ready">
+    ```json
+    {
+      "status": "ready",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "services": {
+        "redis": true,
+        "celery": true,
+        "storage": true,
+        "ocr": {
+          "paddle": true,
+          "easyocr": true,
+          "mistral": false
+        }
+      }
+    }
+    ```
+    
+    **HTTP Status:** `200 OK`
+  </Tab>
+  
+  <Tab title="Not Ready">
+    ```json
+    {
+      "status": "not ready",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "services": {
+        "redis": false,
+        "celery": false,
+        "storage": true,
+        "ocr": {
+          "paddle": true,
+          "easyocr": false,
+          "mistral": false
+        }
+      }
+    }
+    ```
+    
+    **HTTP Status:** `503 Service Unavailable`
+  </Tab>
+</Tabs>
+
+## Service Dependencies
+
+<AccordionGroup>
+  <Accordion title="Redis">
+    **Purpose:** Task queue and job storage
+    
+    **Check:** Connection test with `PING` command
+    
+    **Common Issues:**
+    - Redis server not running
+    - Connection refused
+    - Authentication failure
+    - Network connectivity issues
+    
+    **Troubleshooting:**
+    ```bash
+    # Test Redis connection
+    redis-cli -u $REDIS_URL ping
+    
+    # Check Redis status
+    redis-cli info server
+    ```
+  </Accordion>
+  
+  <Accordion title="Celery">
+    **Purpose:** Background task processing
+    
+    **Check:** Worker availability and task queue connectivity
+    
+    **Common Issues:**
+    - No workers running
+    - Worker process crashed
+    - Task routing problems
+    - Memory issues
+    
+    **Troubleshooting:**
+    ```bash
+    # Check active workers
+    celery -A src.services.celery_app inspect active
+    
+    # Check worker stats
+    celery -A src.services.celery_app inspect stats
+    ```
+  </Accordion>
+  
+  <Accordion title="Storage">
+    **Purpose:** File upload and result storage
+    
+    **Check:** Directory accessibility and disk space
+    
+    **Common Issues:**
+    - Directory permissions
+    - Disk full
+    - Mount point issues
+    - File system errors
+    
+    **Troubleshooting:**
+    ```bash
+    # Check disk space
+    df -h
+    
+    # Check directory permissions
+    ls -la /path/to/upload/dir
+    ```
+  </Accordion>
+  
+  <Accordion title="OCR Providers">
+    **Purpose:** Text extraction from images
+    
+    **Check:** Provider initialization and model availability
+    
+    **Common Issues:**
+    - Missing models
+    - GPU unavailable
+    - API key invalid
+    - Library compatibility
+    
+    **Troubleshooting:**
+    ```bash
+    # Test OCR provider
+    python -c "from src.services.ocr_service import ocr_service; print(ocr_service.get_available_providers())"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Load Balancer Configuration
+
+<Tabs>
+  <Tab title="Nginx">
+    ```nginx
+    upstream doc_converter {
+        server 127.0.0.1:8000;
+        server 127.0.0.1:8001;
+        server 127.0.0.1:8002;
+    }
+
+    server {
+        listen 80;
+        server_name api.example.com;
+
+        # Health check endpoint
+        location /health {
+            access_log off;
+            proxy_pass http://doc_converter/api/v1/health;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        # Readiness check for load balancer
+        location /ready {
+            access_log off;
+            proxy_pass http://doc_converter/api/v1/ready;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        # Main application
+        location / {
+            proxy_pass http://doc_converter;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="HAProxy">
+    ```haproxy
+    backend doc_converter
+        balance roundrobin
+        option httpchk GET /api/v1/ready
+        http-check expect status 200
+        server app1 127.0.0.1:8000 check
+        server app2 127.0.0.1:8001 check
+        server app3 127.0.0.1:8002 check
+
+    frontend doc_converter_frontend
+        bind *:80
+        default_backend doc_converter
+        
+        # Health check bypass
+        acl health_check path_beg /api/v1/health
+        acl ready_check path_beg /api/v1/ready
+        
+        use_backend doc_converter if health_check
+        use_backend doc_converter if ready_check
+    ```
+  </Tab>
+  
+  <Tab title="Kubernetes">
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: doc-converter
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: doc-converter
+      template:
+        metadata:
+          labels:
+            app: doc-converter
+        spec:
+          containers:
+          - name: doc-converter
+            image: doc-converter:latest
+            ports:
+            - containerPort: 8000
+            livenessProbe:
+              httpGet:
+                path: /api/v1/health
+                port: 8000
+              initialDelaySeconds: 30
+              periodSeconds: 10
+            readinessProbe:
+              httpGet:
+                path: /api/v1/ready
+                port: 8000
+              initialDelaySeconds: 5
+              periodSeconds: 5
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+    ```
+  </Tab>
+</Tabs>
+
+## Monitoring Integration
+
+<CodeGroup>
+
+```python Prometheus Metrics
+from prometheus_client import Counter, Histogram, Gauge
+import time
+
+# Define metrics
+health_check_counter = Counter('health_checks_total', 'Total health checks')
+readiness_check_counter = Counter('readiness_checks_total', 'Total readiness checks')
+response_time_histogram = Histogram('health_check_duration_seconds', 'Health check response time')
+
+@app.get("/api/v1/health")
+async def health_check():
+    start_time = time.time()
+    
+    try:
+        health_check_counter.inc()
+        
+        # Your health check logic here
+        result = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "version": "1.0.0"
+        }
+        
+        return result
+    
+    finally:
+        response_time_histogram.observe(time.time() - start_time)
+```
+
+```javascript Monitoring Script
+const axios = require('axios');
+
+class HealthMonitor {
+    constructor(baseUrl, interval = 30000) {
+        this.baseUrl = baseUrl;
+        this.interval = interval;
+        this.isMonitoring = false;
+    }
+
+    async checkHealth() {
+        try {
+            const response = await axios.get(`${this.baseUrl}/api/v1/health`);
+            console.log('Health check passed:', response.data.status);
+            return true;
+        } catch (error) {
+            console.error('Health check failed:', error.message);
+            return false;
+        }
+    }
+
+    async checkReadiness() {
+        try {
+            const response = await axios.get(`${this.baseUrl}/api/v1/ready`);
+            if (response.data.status === 'ready') {
+                console.log('Readiness check passed');
+                return true;
+            } else {
+                console.warn('Readiness check failed:', response.data.services);
+                return false;
+            }
+        } catch (error) {
+            console.error('Readiness check failed:', error.message);
+            return false;
+        }
+    }
+
+    start() {
+        this.isMonitoring = true;
+        console.log('Starting health monitoring...');
+        
+        setInterval(async () => {
+            if (!this.isMonitoring) return;
+            
+            const healthOk = await this.checkHealth();
+            const readinessOk = await this.checkReadiness();
+            
+            if (!healthOk || !readinessOk) {
+                console.warn('Service is not fully operational');
+                // Send alert or take action
+            }
+        }, this.interval);
+    }
+
+    stop() {
+        this.isMonitoring = false;
+        console.log('Stopping health monitoring...');
+    }
+}
+
+// Usage
+const monitor = new HealthMonitor('http://localhost:8000');
+monitor.start();
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Fast Response" icon="zap">
+    Health and readiness checks should respond quickly (< 1 second) to avoid load balancer timeouts.
+  </Card>
+  <Card title="Dependency Checks" icon="link">
+    Readiness checks should validate all critical dependencies but avoid expensive operations.
+  </Card>
+  <Card title="Graceful Degradation" icon="shield">
+    Consider partial readiness states where some non-critical services may be unavailable.
+  </Card>
+  <Card title="Monitoring Integration" icon="chart-line">
+    Integrate health checks with monitoring systems for proactive alerting.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Health Check Fails">
+    **Symptoms:** Health endpoint returns 5xx error or doesn't respond
+    
+    **Causes:**
+    - Application crashed
+    - Port not accessible
+    - Network issues
+    - Configuration problems
+    
+    **Solutions:**
+    1. Check application logs
+    2. Verify port binding
+    3. Test network connectivity
+    4. Restart the application
+  </Accordion>
+  
+  <Accordion title="Readiness Check Fails">
+    **Symptoms:** Readiness endpoint returns "not ready" status
+    
+    **Causes:**
+    - Redis connection issues
+    - Celery workers not running
+    - Storage system problems
+    - OCR providers not initialized
+    
+    **Solutions:**
+    1. Check individual service status
+    2. Restart failed services
+    3. Verify configuration
+    4. Check resource availability
+  </Accordion>
+  
+  <Accordion title="Intermittent Failures">
+    **Symptoms:** Health checks pass sometimes, fail other times
+    
+    **Causes:**
+    - Resource exhaustion
+    - Network instability
+    - Database connection pooling issues
+    - Memory leaks
+    
+    **Solutions:**
+    1. Monitor resource usage
+    2. Increase timeout values
+    3. Implement retry logic
+    4. Scale resources appropriately
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Error Handling"
+    icon="warning"
+    href="/api-reference/errors"
+  >
+    Learn about API error responses and codes
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy with proper health monitoring
+  </Card>
+  <Card
+    title="Monitoring"
+    icon="chart-line"
+    href="/advanced/monitoring"
+  >
+    Set up comprehensive monitoring
+  </Card>
+  <Card
+    title="Jobs API"
+    icon="briefcase"
+    href="/api-reference/jobs"
+  >
+    Learn about the main Jobs API
+  </Card>
+</CardGroup>

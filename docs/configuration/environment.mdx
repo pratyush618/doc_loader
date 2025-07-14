@@ -1,0 +1,518 @@
+---
+title: Environment Configuration
+description: 'Configure the Document Converter with environment variables'
+---
+
+## Overview
+
+The Document Converter is configured using environment variables, making it easy to deploy across different environments without code changes.
+
+## Required Variables
+
+<ParamField env="REDIS_URL" type="string" required>
+  Redis connection URL for job queue and storage
+  
+  **Format:** `redis://[username:password@]host:port[/db]`
+  
+  **Example:** `redis://localhost:6379/0`
+</ParamField>
+
+## Application Settings
+
+<ParamField env="APP_NAME" type="string" default="doc-converter">
+  Application name for logging and monitoring
+</ParamField>
+
+<ParamField env="APP_ENV" type="string" default="production">
+  Environment name (`development`, `staging`, `production`)
+</ParamField>
+
+<ParamField env="DEBUG" type="boolean" default="false">
+  Enable debug mode with detailed logging
+</ParamField>
+
+<ParamField env="API_HOST" type="string" default="0.0.0.0">
+  Host address for the API server
+</ParamField>
+
+<ParamField env="API_PORT" type="integer" default="8000">
+  Port number for the API server
+</ParamField>
+
+<ParamField env="API_PREFIX" type="string" default="/api/v1">
+  API URL prefix for all endpoints
+</ParamField>
+
+## Storage Configuration
+
+<ParamField env="UPLOAD_DIR" type="string" default="./uploads">
+  Directory for uploaded files
+</ParamField>
+
+<ParamField env="OUTPUT_DIR" type="string" default="./outputs">
+  Directory for converted files
+</ParamField>
+
+<ParamField env="MAX_FILE_SIZE" type="integer" default="104857600">
+  Maximum file size in bytes (default: 100MB)
+</ParamField>
+
+<ParamField env="FILE_TTL_HOURS" type="integer" default="24">
+  Time-to-live for temporary files in hours
+</ParamField>
+
+## OCR Provider Settings
+
+<Tabs>
+  <Tab title="PaddleOCR">
+    <ParamField env="PADDLE_OCR_USE_GPU" type="boolean" default="false">
+      Enable GPU acceleration for PaddleOCR
+    </ParamField>
+    
+    <ParamField env="PADDLE_OCR_LANG" type="string" default="en">
+      Language for text recognition
+    </ParamField>
+    
+    <ParamField env="PADDLE_MODELS_DIR" type="string" default="./models/paddle_models">
+      Directory for PaddleOCR models
+    </ParamField>
+  </Tab>
+  
+  <Tab title="EasyOCR">
+    <ParamField env="EASY_OCR_USE_GPU" type="boolean" default="false">
+      Enable GPU acceleration for EasyOCR
+    </ParamField>
+    
+    <ParamField env="EASY_OCR_LANG" type="string" default="en">
+      Languages for text recognition (comma-separated)
+    </ParamField>
+    
+    <ParamField env="EASY_OCR_MODEL_STORAGE" type="string" default="./models/easy_ocr_models">
+      Directory for EasyOCR models
+    </ParamField>
+    
+    <ParamField env="EASY_OCR_TEXT_THRESHOLD" type="float" default="0.7">
+      Text detection threshold (0.0-1.0)
+    </ParamField>
+  </Tab>
+  
+  <Tab title="Mistral AI">
+    <ParamField env="MISTRAL_API_KEY" type="string">
+      Mistral AI API key for OCR services
+    </ParamField>
+    
+    <ParamField env="MISTRAL_API_URL" type="string" default="https://api.mistral.ai/v1/chat/completions">
+      Mistral AI API endpoint
+    </ParamField>
+    
+    <ParamField env="MISTRAL_MODEL" type="string" default="pixtral-12b-2409">
+      Mistral AI model for OCR
+    </ParamField>
+  </Tab>
+</Tabs>
+
+## Sample Configuration
+
+<CodeGroup>
+
+```bash Development
+# Application
+APP_NAME=doc-converter-dev
+APP_ENV=development
+DEBUG=true
+API_HOST=127.0.0.1
+API_PORT=8000
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Storage
+UPLOAD_DIR=./uploads
+OUTPUT_DIR=./outputs
+MAX_FILE_SIZE=104857600
+FILE_TTL_HOURS=24
+
+# OCR - PaddleOCR
+PADDLE_OCR_USE_GPU=false
+PADDLE_OCR_LANG=en
+
+# OCR - EasyOCR
+EASY_OCR_USE_GPU=false
+EASY_OCR_LANG=en
+
+# OCR - Mistral AI (optional)
+MISTRAL_API_KEY=your_api_key_here
+```
+
+```bash Production
+# Application
+APP_NAME=doc-converter
+APP_ENV=production
+DEBUG=false
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Redis (production instance)
+REDIS_URL=redis://redis-cluster.internal:6379/0
+
+# Storage (persistent volumes)
+UPLOAD_DIR=/data/uploads
+OUTPUT_DIR=/data/outputs
+MAX_FILE_SIZE=104857600
+FILE_TTL_HOURS=12
+
+# Security
+SECRET_KEY=your-production-secret-key
+ALLOWED_ORIGINS=https://your-domain.com
+
+# OCR - Optimized for production
+PADDLE_OCR_USE_GPU=true
+PADDLE_OCR_LANG=en
+EASY_OCR_USE_GPU=true
+EASY_OCR_LANG=en,ch_sim,fr
+
+# Webhooks
+WEBHOOK_TIMEOUT=30
+WEBHOOK_MAX_RETRIES=3
+```
+
+```bash Docker
+# Docker environment
+APP_NAME=doc-converter
+APP_ENV=production
+DEBUG=false
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Redis (Docker service)
+REDIS_URL=redis://redis:6379/0
+
+# Storage (Docker volumes)
+UPLOAD_DIR=/app/uploads
+OUTPUT_DIR=/app/outputs
+MAX_FILE_SIZE=104857600
+
+# OCR
+PADDLE_OCR_USE_GPU=false
+EASY_OCR_USE_GPU=false
+EASY_OCR_LANG=en
+
+# Performance
+CELERY_WORKER_CONCURRENCY=2
+```
+
+</CodeGroup>
+
+## Validation
+
+<AccordionGroup>
+  <Accordion title="Required Variables Check">
+    ```python
+    import os
+    
+    def validate_environment():
+        required_vars = [
+            'REDIS_URL',
+        ]
+        
+        missing_vars = []
+        for var in required_vars:
+            if not os.getenv(var):
+                missing_vars.append(var)
+        
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        print("Environment validation passed")
+    
+    # Run validation
+    validate_environment()
+    ```
+  </Accordion>
+  
+  <Accordion title="Redis Connection Test">
+    ```python
+    import redis
+    import os
+    
+    def test_redis_connection():
+        try:
+            redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+            client = redis.from_url(redis_url)
+            client.ping()
+            print("Redis connection successful")
+            return True
+        except Exception as e:
+            print(f"Redis connection failed: {e}")
+            return False
+    
+    test_redis_connection()
+    ```
+  </Accordion>
+  
+  <Accordion title="Storage Directory Check">
+    ```python
+    import os
+    from pathlib import Path
+    
+    def validate_storage_dirs():
+        dirs = [
+            os.getenv('UPLOAD_DIR', './uploads'),
+            os.getenv('OUTPUT_DIR', './outputs'),
+        ]
+        
+        for dir_path in dirs:
+            path = Path(dir_path)
+            try:
+                path.mkdir(parents=True, exist_ok=True)
+                # Test write permissions
+                test_file = path / 'test.txt'
+                test_file.write_text('test')
+                test_file.unlink()
+                print(f"Storage directory OK: {dir_path}")
+            except Exception as e:
+                print(f"Storage directory error: {dir_path} - {e}")
+    
+    validate_storage_dirs()
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Loading Configuration
+
+<Tabs>
+  <Tab title=".env File">
+    Create a `.env` file in your project root:
+    
+    ```bash
+    # Copy from example
+    cp .env.example .env
+    
+    # Edit with your values
+    nano .env
+    ```
+    
+    The application will automatically load variables from `.env` file.
+  </Tab>
+  
+  <Tab title="System Environment">
+    Set environment variables at the system level:
+    
+    ```bash
+    # Linux/macOS
+    export REDIS_URL=redis://localhost:6379/0
+    export DEBUG=false
+    
+    # Windows
+    set REDIS_URL=redis://localhost:6379/0
+    set DEBUG=false
+    ```
+  </Tab>
+  
+  <Tab title="Docker Compose">
+    ```yaml
+    version: '3.8'
+    services:
+      doc-converter:
+        image: doc-converter:latest
+        environment:
+          - REDIS_URL=redis://redis:6379/0
+          - DEBUG=false
+          - API_HOST=0.0.0.0
+          - API_PORT=8000
+        env_file:
+          - .env
+        depends_on:
+          - redis
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+    ```
+  </Tab>
+  
+  <Tab title="Kubernetes">
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: doc-converter-config
+    data:
+      APP_NAME: "doc-converter"
+      APP_ENV: "production"
+      DEBUG: "false"
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+    
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: doc-converter-secrets
+    type: Opaque
+    data:
+      REDIS_URL: cmVkaXM6Ly9yZWRpczotNjM3OS8w  # base64 encoded
+      SECRET_KEY: eW91ci1zZWNyZXQta2V5  # base64 encoded
+      MISTRAL_API_KEY: eW91ci1hcGkta2V5  # base64 encoded
+    
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: doc-converter
+    spec:
+      template:
+        spec:
+          containers:
+          - name: doc-converter
+            image: doc-converter:latest
+            envFrom:
+            - configMapRef:
+                name: doc-converter-config
+            - secretRef:
+                name: doc-converter-secrets
+    ```
+  </Tab>
+</Tabs>
+
+## Security Considerations
+
+<Warning>
+  Never commit sensitive environment variables to version control. Use secure secret management systems in production.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Secret Management" icon="key">
+    - Use proper secret management systems
+    - Rotate secrets regularly
+    - Limit access to sensitive variables
+    - Monitor secret usage
+  </Card>
+  <Card title="Environment Isolation" icon="shield">
+    - Separate configs for each environment
+    - Use different Redis instances
+    - Implement proper access controls
+    - Monitor environment changes
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Environment-Specific Files">
+    ```bash
+    # Development
+    .env.development
+    
+    # Staging
+    .env.staging
+    
+    # Production
+    .env.production
+    ```
+  </Step>
+  
+  <Step title="Validate on Startup">
+    ```python
+    # Add to your application startup
+    from src.core.config import settings
+    
+    def validate_config():
+        # Check required settings
+        if not settings.redis_url:
+            raise ValueError("REDIS_URL is required")
+        
+        # Test connections
+        test_redis_connection()
+        
+        print("Configuration validated successfully")
+    
+    validate_config()
+    ```
+  </Step>
+  
+  <Step title="Monitor Configuration">
+    ```python
+    # Log configuration (without secrets)
+    import logging
+    
+    def log_config():
+        logging.info(f"App: {settings.app_name}")
+        logging.info(f"Environment: {settings.app_env}")
+        logging.info(f"Debug: {settings.debug}")
+        logging.info(f"API Host: {settings.api_host}")
+        logging.info(f"API Port: {settings.api_port}")
+        # Don't log secrets!
+    
+    log_config()
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Environment Not Loading">
+    **Symptoms:** Default values being used instead of environment variables
+    
+    **Solutions:**
+    - Check file path and permissions
+    - Verify variable names (case-sensitive)
+    - Ensure no spaces around `=` in .env files
+    - Check for UTF-8 encoding issues
+  </Accordion>
+  
+  <Accordion title="Redis Connection Issues">
+    **Symptoms:** `redis.exceptions.ConnectionError`
+    
+    **Solutions:**
+    - Verify Redis URL format
+    - Check if Redis server is running
+    - Test network connectivity
+    - Verify credentials and permissions
+  </Accordion>
+  
+  <Accordion title="Storage Permission Issues">
+    **Symptoms:** File upload/download errors
+    
+    **Solutions:**
+    - Check directory permissions
+    - Verify disk space availability
+    - Ensure directories exist
+    - Test write permissions
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="OCR Configuration"
+    icon="eye"
+    href="/configuration/ocr-providers"
+  >
+    Configure OCR providers for text extraction
+  </Card>
+  <Card
+    title="Storage Setup"
+    icon="database"
+    href="/configuration/storage"
+  >
+    Configure file storage and persistence
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy with proper configuration management
+  </Card>
+  <Card
+    title="Monitoring"
+    icon="chart-line"
+    href="/advanced/monitoring"
+  >
+    Monitor configuration and performance
+  </Card>
+</CardGroup>

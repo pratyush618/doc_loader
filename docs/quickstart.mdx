@@ -1,0 +1,395 @@
+---
+title: Quick Start
+description: 'Get up and running with Document Converter in minutes'
+---
+
+## Prerequisites
+
+Before getting started, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Python 3.12+" icon="python">
+    Required for running the application
+  </Card>
+  <Card title="Redis Server" icon="database">
+    Used for task queuing and job storage
+  </Card>
+  <Card title="Docker (Optional)" icon="docker">
+    For containerized deployment
+  </Card>
+  <Card title="uv Package Manager" icon="package">
+    Recommended for fast dependency management
+  </Card>
+</CardGroup>
+
+## Option 1: Docker Compose (Recommended)
+
+The fastest way to get started is using Docker Compose:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/example/doc-converter.git
+    cd doc-converter
+    ```
+  </Step>
+  
+  <Step title="Configure environment">
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit the `.env` file with your configuration:
+    ```bash
+    # Redis Configuration
+    REDIS_URL=redis://redis:6379/0
+    
+    # OCR Configuration (optional)
+    MISTRAL_API_KEY=your_mistral_api_key_here
+    EASY_OCR_USE_GPU=false
+    
+    # File Storage
+    MAX_FILE_SIZE=104857600  # 100MB
+    ```
+  </Step>
+  
+  <Step title="Start the services">
+    ```bash
+    docker-compose up -d
+    ```
+    
+    This will start:
+    - API server on port 8000
+    - Redis server
+    - Celery worker for processing
+  </Step>
+  
+  <Step title="Verify the setup">
+    ```bash
+    curl http://localhost:8000/api/v1/health
+    ```
+    
+    You should see:
+    ```json
+    {
+      "status": "healthy",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "version": "1.0.0"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Option 2: Development Setup with uv
+
+For local development, we recommend using `uv` for fast package management:
+
+<Steps>
+  <Step title="Install uv">
+    <CodeGroup>
+      ```bash Windows
+      winget install --id=astral-sh.uv -e
+      ```
+      
+      ```bash macOS/Linux
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ```
+      
+      ```bash pip
+      pip install uv
+      ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Set up the project">
+    ```bash
+    git clone https://github.com/example/doc-converter.git
+    cd doc-converter
+    uv sync  # Creates .venv and installs dependencies
+    ```
+  </Step>
+  
+  <Step title="Start Redis">
+    ```bash
+    # macOS
+    brew services start redis
+    
+    # Linux
+    sudo systemctl start redis
+    
+    # Windows
+    # Download and install Redis from https://redis.io/download
+    ```
+  </Step>
+  
+  <Step title="Start the API server">
+    ```bash
+    uv run python run_api.py
+    ```
+    
+    The API will be available at `http://localhost:8000`
+  </Step>
+  
+  <Step title="Start the worker (new terminal)">
+    ```bash
+    uv run python run_worker.py
+    ```
+    
+    This starts the Celery worker for processing jobs
+  </Step>
+</Steps>
+
+## Option 3: Manual Installation
+
+If you prefer not to use uv:
+
+<Steps>
+  <Step title="Install dependencies">
+    ```bash
+    pip install -r requirements.txt
+    ```
+  </Step>
+  
+  <Step title="Set up environment">
+    ```bash
+    cp .env.example .env
+    # Edit .env file as needed
+    ```
+  </Step>
+  
+  <Step title="Start Redis">
+    ```bash
+    redis-server
+    ```
+  </Step>
+  
+  <Step title="Start the services">
+    ```bash
+    # Terminal 1: API Server
+    python run_api.py
+    
+    # Terminal 2: Worker
+    python run_worker.py
+    ```
+  </Step>
+</Steps>
+
+## Your First Conversion
+
+Once everything is running, let's convert your first document:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@sample.pdf" \
+  -F "output_format=md"
+```
+
+```python Python
+import requests
+
+# Upload and convert
+response = requests.post(
+    "http://localhost:8000/api/v1/jobs",
+    files={"file": open("sample.pdf", "rb")},
+    data={"output_format": "md"}
+)
+
+job = response.json()
+print(f"Job created: {job['id']}")
+
+# Check status
+status_response = requests.get(f"http://localhost:8000/api/v1/jobs/{job['id']}")
+print(f"Status: {status_response.json()['status']}")
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('output_format', 'md');
+
+const response = await fetch('http://localhost:8000/api/v1/jobs', {
+  method: 'POST',
+  body: formData
+});
+
+const job = await response.json();
+console.log('Job ID:', job.id);
+
+// Poll for completion
+const checkStatus = async () => {
+  const statusResponse = await fetch(`http://localhost:8000/api/v1/jobs/${job.id}`);
+  const status = await statusResponse.json();
+  
+  if (status.status === 'completed') {
+    // Download result
+    const resultResponse = await fetch(`http://localhost:8000/api/v1/jobs/${job.id}/result`);
+    const result = await resultResponse.text();
+    console.log('Conversion result:', result);
+  }
+};
+```
+
+</CodeGroup>
+
+## API Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Submit Job" icon="plus">
+    `POST /api/v1/jobs`
+    
+    Upload a file for conversion
+  </Card>
+  <Card title="Get Job Status" icon="clock">
+    `GET /api/v1/jobs/{job_id}`
+    
+    Check conversion progress
+  </Card>
+  <Card title="Download Result" icon="download">
+    `GET /api/v1/jobs/{job_id}/result`
+    
+    Get converted document
+  </Card>
+  <Card title="Health Check" icon="heart">
+    `GET /api/v1/health`
+    
+    Check API health status
+  </Card>
+</CardGroup>
+
+## Configuration Options
+
+Key environment variables you can configure:
+
+<AccordionGroup>
+  <Accordion title="Basic Settings">
+    ```bash
+    # Application
+    APP_NAME=doc-converter
+    DEBUG=false
+    
+    # API
+    API_HOST=0.0.0.0
+    API_PORT=8000
+    
+    # Redis
+    REDIS_URL=redis://localhost:6379/0
+    ```
+  </Accordion>
+  
+  <Accordion title="File Storage">
+    ```bash
+    # Storage paths
+    UPLOAD_DIR=./uploads
+    OUTPUT_DIR=./outputs
+    MAX_FILE_SIZE=104857600  # 100MB
+    FILE_TTL_HOURS=24
+    ```
+  </Accordion>
+  
+  <Accordion title="OCR Settings">
+    ```bash
+    # OCR Providers
+    MISTRAL_API_KEY=your_api_key_here
+    EASY_OCR_USE_GPU=false
+    EASY_OCR_LANG=en
+    PADDLE_OCR_USE_GPU=false
+    ```
+  </Accordion>
+  
+  <Accordion title="Webhook Configuration">
+    ```bash
+    # Webhooks
+    DEFAULT_WEBHOOK_URL=https://your-site.com/webhook
+    WEBHOOK_TIMEOUT=30
+    WEBHOOK_MAX_RETRIES=3
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Your Setup
+
+Run the health check to ensure everything is working:
+
+```bash
+curl http://localhost:8000/api/v1/ready
+```
+
+Expected response:
+```json
+{
+  "status": "ready",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "services": {
+    "redis": true,
+    "celery": true
+  }
+}
+```
+
+<Check>
+  **You're all set!** Your Document Converter is ready to process files. Check out the [API Reference](/api-reference) for detailed endpoint documentation.
+</Check>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Explore Features"
+    icon="compass"
+    href="/features/conversion"
+  >
+    Learn about supported formats and conversion options
+  </Card>
+  <Card
+    title="Configure OCR"
+    icon="eye"
+    href="/features/ocr"
+  >
+    Set up OCR providers for image and PDF processing
+  </Card>
+  <Card
+    title="Set Up Webhooks"
+    icon="webhook"
+    href="/features/webhooks"
+  >
+    Configure real-time notifications for job completion
+  </Card>
+  <Card
+    title="Production Deployment"
+    icon="server"
+    href="/deployment/production"
+  >
+    Deploy to production with scaling and monitoring
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Redis Connection Issues">
+    If you see Redis connection errors:
+    
+    1. Ensure Redis is running: `redis-cli ping`
+    2. Check the Redis URL in your `.env` file
+    3. Verify firewall settings if using remote Redis
+  </Accordion>
+  
+  <Accordion title="OCR Initialization Errors">
+    If OCR providers fail to initialize:
+    
+    1. For EasyOCR: Ensure PyTorch is properly installed
+    2. For PaddleOCR: Check model downloads in `./models/`
+    3. For Mistral: Verify your API key in `.env`
+  </Accordion>
+  
+  <Accordion title="File Upload Errors">
+    If file uploads fail:
+    
+    1. Check file size limits in configuration
+    2. Verify upload directory permissions
+    3. Ensure supported file format
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,660 @@
+---
+title: Basic Conversion
+description: 'Simple document conversion examples'
+---
+
+## Overview
+
+This guide shows how to perform basic document conversions using the Document Converter API with different programming languages and tools.
+
+## Quick Start Example
+
+<CodeGroup>
+
+```bash cURL
+# Convert a PDF to Markdown
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -F "file=@document.pdf" \
+  -F "output_format=md"
+
+# Response: {"id": "job-123", "status": "pending", ...}
+
+# Check status
+curl "http://localhost:8000/api/v1/jobs/job-123"
+
+# Download result when completed
+curl "http://localhost:8000/api/v1/jobs/job-123/result" -o document.md
+```
+
+```python Python
+import requests
+import time
+
+def convert_document(file_path, output_format='md'):
+    """Convert a document and return the result"""
+    
+    # Upload file
+    with open(file_path, 'rb') as f:
+        response = requests.post(
+            'http://localhost:8000/api/v1/jobs',
+            files={'file': f},
+            data={'output_format': output_format}
+        )
+    
+    if response.status_code != 200:
+        raise Exception(f"Upload failed: {response.text}")
+    
+    job = response.json()
+    job_id = job['id']
+    print(f"Job created: {job_id}")
+    
+    # Wait for completion
+    while True:
+        status_response = requests.get(f'http://localhost:8000/api/v1/jobs/{job_id}')
+        status = status_response.json()
+        
+        print(f"Status: {status['status']}, Progress: {status['progress']}%")
+        
+        if status['status'] == 'completed':
+            # Download result
+            result_response = requests.get(f'http://localhost:8000/api/v1/jobs/{job_id}/result')
+            return result_response.text
+        elif status['status'] == 'failed':
+            raise Exception(f"Conversion failed: {status.get('error_message', 'Unknown error')}")
+        
+        time.sleep(2)
+
+# Usage
+try:
+    result = convert_document('document.pdf', 'md')
+    print("Conversion completed!")
+    print(result[:500] + "..." if len(result) > 500 else result)
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+```javascript JavaScript
+async function convertDocument(file, outputFormat = 'md') {
+    try {
+        // Upload file
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('output_format', outputFormat);
+        
+        const uploadResponse = await fetch('http://localhost:8000/api/v1/jobs', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        }
+        
+        const job = await uploadResponse.json();
+        const jobId = job.id;
+        console.log('Job created:', jobId);
+        
+        // Wait for completion
+        while (true) {
+            const statusResponse = await fetch(`http://localhost:8000/api/v1/jobs/${jobId}`);
+            const status = await statusResponse.json();
+            
+            console.log(`Status: ${status.status}, Progress: ${status.progress}%`);
+            
+            if (status.status === 'completed') {
+                // Download result
+                const resultResponse = await fetch(`http://localhost:8000/api/v1/jobs/${jobId}/result`);
+                const result = await resultResponse.text();
+                return result;
+            } else if (status.status === 'failed') {
+                throw new Error(`Conversion failed: ${status.error_message || 'Unknown error'}`);
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    } catch (error) {
+        console.error('Error:', error.message);
+        throw error;
+    }
+}
+
+// Usage with file input
+document.getElementById('fileInput').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        try {
+            const result = await convertDocument(file, 'md');
+            console.log('Conversion completed!');
+            console.log(result.substring(0, 500) + (result.length > 500 ? '...' : ''));
+        } catch (error) {
+            console.error('Conversion failed:', error.message);
+        }
+    }
+});
+```
+
+</CodeGroup>
+
+## Converting Different File Types
+
+<Tabs>
+  <Tab title="PDF Documents">
+    ```python
+    # Convert PDF to Markdown
+    result = convert_document('report.pdf', 'md')
+    
+    # Convert PDF to JSON for structured data
+    result = convert_document('report.pdf', 'json')
+    
+    # Convert scanned PDF with OCR
+    with open('scanned.pdf', 'rb') as f:
+        response = requests.post(
+            'http://localhost:8000/api/v1/jobs',
+            files={'file': f},
+            data={
+                'output_format': 'md',
+                'use_ocr': 'true',
+                'ocr_provider': 'paddle'
+            }
+        )
+    ```
+  </Tab>
+  
+  <Tab title="Office Documents">
+    ```python
+    # Convert Word document
+    result = convert_document('document.docx', 'md')
+    
+    # Convert PowerPoint presentation
+    result = convert_document('presentation.pptx', 'json')
+    
+    # Convert Excel spreadsheet
+    result = convert_document('data.xlsx', 'json')
+    ```
+  </Tab>
+  
+  <Tab title="Images">
+    ```python
+    # Convert image with OCR
+    with open('screenshot.png', 'rb') as f:
+        response = requests.post(
+            'http://localhost:8000/api/v1/jobs',
+            files={'file': f},
+            data={
+                'output_format': 'md',
+                'use_ocr': 'true',
+                'ocr_provider': 'easyocr'
+            }
+        )
+    
+    # Multiple image formats supported
+    image_files = ['scan1.jpg', 'scan2.png', 'scan3.tiff']
+    for image_file in image_files:
+        result = convert_document(image_file, 'md')
+        print(f"Converted {image_file}")
+    ```
+  </Tab>
+  
+  <Tab title="Text Files">
+    ```python
+    # Convert plain text
+    result = convert_document('readme.txt', 'md')
+    
+    # Convert markdown (reformatting)
+    result = convert_document('notes.md', 'md')
+    
+    # Convert log files
+    result = convert_document('application.log', 'md')
+    ```
+  </Tab>
+</Tabs>
+
+## Output Formats
+
+<AccordionGroup>
+  <Accordion title="Markdown Output">
+    **Best for:** Documentation, content management, human-readable formats
+    
+    ```python
+    # Convert to Markdown
+    result = convert_document('document.pdf', 'md')
+    
+    # Save to file
+    with open('converted.md', 'w', encoding='utf-8') as f:
+        f.write(result)
+    
+    # Preview structure
+    lines = result.split('\n')
+    for line in lines[:10]:
+        if line.startswith('#'):
+            print(line)  # Print headings
+    ```
+    
+    **Output example:**
+    ```markdown
+    # Document Title
+    
+    ## Introduction
+    
+    This is the introduction paragraph with **bold** text and *italic* text.
+    
+    ## Section 1
+    
+    - List item 1
+    - List item 2
+    - List item 3
+    
+    ![Image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ...)
+    ```
+  </Accordion>
+  
+  <Accordion title="JSON Output">
+    **Best for:** Data processing, API integration, structured analysis
+    
+    ```python
+    import json
+    
+    # Convert to JSON
+    result = convert_document('document.pdf', 'json')
+    
+    # Parse JSON
+    data = json.loads(result)
+    
+    # Access document metadata
+    print(f"Document: {data['document']['filename']}")
+    print(f"Type: {data['document']['type']}")
+    print(f"Pages: {data['document']['metadata'].get('pages', 'N/A')}")
+    
+    # Access content
+    if data['content']['type'] == 'multi_page_document':
+        for page in data['content']['pages']:
+            print(f"Page {page['page_number']}: {page['word_count']} words")
+    
+    # Access images
+    if data['images']:
+        print(f"Found {len(data['images'])} images")
+        for image_name in data['images']:
+            print(f"- {image_name}")
+    ```
+    
+    **Output structure:**
+    ```json
+    {
+      "document": {
+        "filename": "report.pdf",
+        "title": "Annual Report",
+        "type": "PDF Document",
+        "metadata": {
+          "pages": 25,
+          "author": "John Doe",
+          "created": "2024-01-15T10:30:00Z"
+        }
+      },
+      "content": {
+        "type": "multi_page_document",
+        "total_pages": 25,
+        "pages": [
+          {
+            "page_number": 1,
+            "text": "Page content...",
+            "word_count": 245
+          }
+        ]
+      },
+      "images": {
+        "chart1.png": "base64_encoded_data..."
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+<CodeGroup>
+
+```python Robust Error Handling
+import requests
+import time
+from typing import Optional
+
+class ConversionError(Exception):
+    """Custom exception for conversion errors"""
+    pass
+
+def convert_document_safe(file_path: str, output_format: str = 'md', 
+                         max_retries: int = 3, timeout: int = 300) -> Optional[str]:
+    """
+    Convert document with comprehensive error handling
+    
+    Args:
+        file_path: Path to the file to convert
+        output_format: 'md' or 'json'
+        max_retries: Maximum number of retry attempts
+        timeout: Maximum time to wait for completion (seconds)
+    
+    Returns:
+        Converted content or None if failed
+    """
+    
+    # Validate inputs
+    if not os.path.exists(file_path):
+        raise ConversionError(f"File not found: {file_path}")
+    
+    file_size = os.path.getsize(file_path)
+    max_size = 100 * 1024 * 1024  # 100MB
+    if file_size > max_size:
+        raise ConversionError(f"File too large: {file_size} bytes (max: {max_size})")
+    
+    if output_format not in ['md', 'json']:
+        raise ConversionError(f"Invalid output format: {output_format}")
+    
+    # Retry logic
+    for attempt in range(max_retries):
+        try:
+            # Upload file
+            with open(file_path, 'rb') as f:
+                response = requests.post(
+                    'http://localhost:8000/api/v1/jobs',
+                    files={'file': f},
+                    data={'output_format': output_format},
+                    timeout=30
+                )
+            
+            if response.status_code == 413:
+                raise ConversionError("File too large")
+            elif response.status_code == 422:
+                error_detail = response.json().get('detail', 'Validation error')
+                raise ConversionError(f"Validation error: {error_detail}")
+            elif response.status_code != 200:
+                if attempt < max_retries - 1:
+                    print(f"Upload failed (attempt {attempt + 1}), retrying...")
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+                else:
+                    raise ConversionError(f"Upload failed: {response.text}")
+            
+            job = response.json()
+            job_id = job['id']
+            print(f"Job created: {job_id}")
+            
+            # Wait for completion
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    status_response = requests.get(
+                        f'http://localhost:8000/api/v1/jobs/{job_id}',
+                        timeout=10
+                    )
+                    
+                    if status_response.status_code == 404:
+                        raise ConversionError("Job not found")
+                    elif status_response.status_code != 200:
+                        raise ConversionError(f"Status check failed: {status_response.text}")
+                    
+                    status = status_response.json()
+                    print(f"Status: {status['status']}, Progress: {status['progress']}%")
+                    
+                    if status['status'] == 'completed':
+                        # Download result
+                        result_response = requests.get(
+                            f'http://localhost:8000/api/v1/jobs/{job_id}/result',
+                            timeout=30
+                        )
+                        
+                        if result_response.status_code == 200:
+                            return result_response.text
+                        else:
+                            raise ConversionError(f"Download failed: {result_response.text}")
+                    
+                    elif status['status'] == 'failed':
+                        error_msg = status.get('error_message', 'Unknown error')
+                        raise ConversionError(f"Conversion failed: {error_msg}")
+                    
+                    time.sleep(2)
+                    
+                except requests.RequestException as e:
+                    print(f"Network error: {e}")
+                    if attempt < max_retries - 1:
+                        break  # Retry the entire process
+                    else:
+                        raise ConversionError(f"Network error: {e}")
+            
+            raise ConversionError(f"Conversion timeout after {timeout} seconds")
+            
+        except ConversionError:
+            raise
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Unexpected error (attempt {attempt + 1}): {e}")
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                raise ConversionError(f"Unexpected error: {e}")
+    
+    raise ConversionError("Max retries exceeded")
+
+# Usage
+try:
+    result = convert_document_safe('document.pdf', 'md', max_retries=3, timeout=300)
+    if result:
+        print("Conversion successful!")
+        with open('output.md', 'w', encoding='utf-8') as f:
+            f.write(result)
+    else:
+        print("Conversion failed")
+except ConversionError as e:
+    print(f"Conversion error: {e}")
+```
+
+```javascript Error Handling
+class DocumentConverter {
+    constructor(baseUrl = 'http://localhost:8000') {
+        this.baseUrl = baseUrl;
+    }
+    
+    async convertDocument(file, outputFormat = 'md', options = {}) {
+        const {
+            maxRetries = 3,
+            timeout = 300000, // 5 minutes
+            retryDelay = 1000
+        } = options;
+        
+        // Validate inputs
+        if (!file) {
+            throw new Error('No file provided');
+        }
+        
+        if (file.size > 100 * 1024 * 1024) {
+            throw new Error('File too large (max 100MB)');
+        }
+        
+        if (!['md', 'json'].includes(outputFormat)) {
+            throw new Error('Invalid output format');
+        }
+        
+        // Retry logic
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const jobId = await this.uploadFile(file, outputFormat);
+                const result = await this.waitForCompletion(jobId, timeout);
+                return result;
+            } catch (error) {
+                console.error(`Attempt ${attempt + 1} failed:`, error.message);
+                
+                if (attempt < maxRetries - 1) {
+                    const delay = retryDelay * Math.pow(2, attempt);
+                    console.log(`Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw error;
+                }
+            }
+        }
+    }
+    
+    async uploadFile(file, outputFormat) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('output_format', outputFormat);
+        
+        const response = await fetch(`${this.baseUrl}/api/v1/jobs`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.status === 413) {
+            throw new Error('File too large');
+        } else if (response.status === 422) {
+            const error = await response.json();
+            throw new Error(`Validation error: ${error.detail}`);
+        } else if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+        }
+        
+        const job = await response.json();
+        console.log('Job created:', job.id);
+        return job.id;
+    }
+    
+    async waitForCompletion(jobId, timeout) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < timeout) {
+            const response = await fetch(`${this.baseUrl}/api/v1/jobs/${jobId}`);
+            
+            if (response.status === 404) {
+                throw new Error('Job not found');
+            } else if (!response.ok) {
+                throw new Error(`Status check failed: ${response.statusText}`);
+            }
+            
+            const status = await response.json();
+            console.log(`Status: ${status.status}, Progress: ${status.progress}%`);
+            
+            if (status.status === 'completed') {
+                return await this.downloadResult(jobId);
+            } else if (status.status === 'failed') {
+                throw new Error(`Conversion failed: ${status.error_message || 'Unknown error'}`);
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        throw new Error('Conversion timeout');
+    }
+    
+    async downloadResult(jobId) {
+        const response = await fetch(`${this.baseUrl}/api/v1/jobs/${jobId}/result`);
+        
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.statusText}`);
+        }
+        
+        return await response.text();
+    }
+}
+
+// Usage
+const converter = new DocumentConverter();
+
+document.getElementById('convertBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
+    
+    try {
+        console.log('Starting conversion...');
+        const result = await converter.convertDocument(file, 'md', {
+            maxRetries: 3,
+            timeout: 300000
+        });
+        
+        console.log('Conversion completed!');
+        
+        // Display result
+        const resultElement = document.getElementById('result');
+        resultElement.textContent = result.substring(0, 1000) + (result.length > 1000 ? '...' : '');
+        
+        // Create download link
+        const blob = new Blob([result], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const downloadLink = document.getElementById('downloadLink');
+        downloadLink.href = url;
+        downloadLink.download = 'converted.md';
+        downloadLink.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Conversion failed:', error.message);
+        alert(`Conversion failed: ${error.message}`);
+    }
+});
+```
+
+</CodeGroup>
+
+## Performance Tips
+
+<CardGroup cols={2}>
+  <Card title="File Optimization" icon="file">
+    - Compress large files before upload
+    - Use appropriate file formats
+    - Remove unnecessary content
+    - Optimize images for OCR
+  </Card>
+  <Card title="Request Optimization" icon="zap">
+    - Implement connection pooling
+    - Use appropriate timeouts
+    - Batch multiple conversions
+    - Cache results when possible
+  </Card>
+  <Card title="Error Recovery" icon="shield">
+    - Implement retry logic
+    - Handle network failures
+    - Validate inputs early
+    - Log errors for debugging
+  </Card>
+  <Card title="Progress Tracking" icon="chart-line">
+    - Poll status regularly
+    - Show progress to users
+    - Implement cancellation
+    - Handle long-running jobs
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="OCR Processing"
+    icon="eye"
+    href="/examples/ocr-processing"
+  >
+    Learn how to extract text from images
+  </Card>
+  <Card
+    title="Webhook Integration"
+    icon="webhook"
+    href="/examples/webhook-integration"
+  >
+    Set up real-time notifications
+  </Card>
+  <Card
+    title="Batch Processing"
+    icon="layers"
+    href="/examples/batch-processing"
+  >
+    Process multiple documents efficiently
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/introduction"
+  >
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

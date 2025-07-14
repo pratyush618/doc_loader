@@ -1,0 +1,331 @@
+---
+title: "Troubleshooting Guide"
+description: "Resolve common issues when running Mintlify documentation on Windows"
+---
+
+# Mintlify Documentation Troubleshooting Guide
+
+This guide helps resolve common issues when running Mintlify documentation on Windows.
+
+## Common Issues and Solutions
+
+### 1. Mintlify CLI Update Check Error
+
+<Warning>
+**Error:**
+```
+Error: Command failed: npm view C:\Users\...\@mintlify\cli\bin\index.js version --silent
+```
+</Warning>
+
+**Solution:**
+Install a stable version of Mintlify CLI:
+
+<CodeGroup>
+```bash Install stable version
+cd docs
+npm install @mintlify/cli@4.0.500 --save-dev --force
+```
+
+```bash Use npx instead of global commands
+npx @mintlify/cli dev --no-open
+```
+</CodeGroup>
+
+### 2. Missing Favicon/Logo Files
+
+<Warning>
+**Error:**
+```
+ENOENT: no such file or directory, open 'favicon.svg'
+```
+</Warning>
+
+**Solution:**
+Ensure these files exist in the docs directory:
+- `favicon.svg`
+- `logo/light.svg`
+- `logo/dark.svg`
+
+### 3. Port Already in Use
+
+<Warning>
+**Error:**
+```
+Port 3000 is already in use
+```
+</Warning>
+
+**Solution:**
+Mintlify will automatically try the next available port (3001, 3002, etc.) or you can specify a port:
+
+```bash
+npx @mintlify/cli dev --port 3005
+```
+
+### 4. Windows Path Issues
+
+<Warning>
+**Problem:**
+Windows path separators causing issues with file resolution.
+</Warning>
+
+**Solution:**
+Use forward slashes in mint.json paths and ensure all referenced files use correct casing.
+
+## Recommended Setup for Windows
+
+### 1. Install Dependencies
+
+```bash
+cd docs
+npm install
+```
+
+### 2. Use NPX Commands
+
+<Info>
+Always use npx to avoid global CLI issues:
+</Info>
+
+<Tabs>
+<Tab title="Development">
+```bash
+npm run dev
+# or
+npx @mintlify/cli dev
+```
+</Tab>
+<Tab title="Build">
+```bash
+npm run build
+# or
+npx @mintlify/cli build
+```
+</Tab>
+<Tab title="Preview">
+```bash
+npm run preview
+# or
+npx @mintlify/cli dev --no-open
+```
+</Tab>
+</Tabs>
+
+### 3. Package.json Scripts
+
+```json
+{
+  "scripts": {
+    "dev": "npx @mintlify/cli dev",
+    "build": "npx @mintlify/cli build",
+    "preview": "npx @mintlify/cli dev --no-open",
+    "start": "npx @mintlify/cli dev --no-open"
+  }
+}
+```
+
+## Alternative Solutions
+
+<Tabs>
+<Tab title="Docker">
+<Info>
+Recommended for consistency
+</Info>
+
+Create a `Dockerfile` in the docs directory:
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+```
+
+Run with:
+```bash
+docker build -t doc-converter-docs .
+docker run -p 3000:3000 doc-converter-docs
+```
+</Tab>
+
+<Tab title="WSL">
+If you have WSL installed:
+
+```bash
+# In WSL terminal
+cd /mnt/d/work/git-repos/loader/doc_converter/docs
+npm install
+npx @mintlify/cli dev
+```
+</Tab>
+
+<Tab title="GitHub Codespaces">
+For cloud development:
+
+<Steps>
+<Step title="Open Codespaces">
+Open repository in GitHub Codespaces
+</Step>
+<Step title="Navigate to docs">
+Navigate to docs directory
+</Step>
+<Step title="Install and run">
+Run `npm install && npm run dev`
+</Step>
+</Steps>
+</Tab>
+</Tabs>
+
+## Deployment Options
+
+<CardGroup cols={3}>
+<Card title="Mintlify Cloud" icon="cloud">
+- Sign up at [mintlify.com](https://mintlify.com)
+- Connect GitHub repository
+- Set docs path to `/docs`
+- Automatic deployment on push
+</Card>
+<Card title="Vercel" icon="triangle">
+```bash
+cd docs
+npm install -g vercel
+vercel --prod
+```
+</Card>
+<Card title="Netlify" icon="globe">
+```bash
+cd docs
+npm install -g netlify-cli
+netlify deploy --prod
+```
+</Card>
+</CardGroup>
+
+## Environment Variables
+
+For development on Windows:
+
+<Tabs>
+<Tab title="PowerShell">
+```bash
+$env:NODE_ENV="development"
+$env:PORT="3000"
+```
+</Tab>
+<Tab title="Command Prompt">
+```bash
+set NODE_ENV=development
+set PORT=3000
+```
+</Tab>
+</Tabs>
+
+## Debug Mode
+
+Enable debug mode for more detailed error messages:
+
+<Tabs>
+<Tab title="PowerShell">
+```bash
+$env:DEBUG="true"
+npm run dev
+```
+</Tab>
+<Tab title="Command Prompt">
+```bash
+set DEBUG=true
+npm run dev
+```
+</Tab>
+</Tabs>
+
+## Performance Tips
+
+<AccordionGroup>
+<Accordion title="Exclude unnecessary files">
+Add to `.gitignore`:
+```
+node_modules/
+_site/
+.mintlify/
+```
+</Accordion>
+
+<Accordion title="Use local dependencies">
+Use local dependencies instead of global CLI
+</Accordion>
+
+<Accordion title="Clear cache">
+If issues persist:
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+</Accordion>
+</AccordionGroup>
+
+## Getting Help
+
+If you encounter issues not covered here:
+
+<Steps>
+<Step title="Check documentation">
+Check the [Mintlify documentation](https://mintlify.com/docs)
+</Step>
+<Step title="Review error logs">
+Review the error logs carefully
+</Step>
+<Step title="Use verbose flag">
+Try running commands with `--verbose` flag
+</Step>
+<Step title="Check Node.js version">
+Check Node.js version compatibility (requires Node 18+)
+</Step>
+</Steps>
+
+## Version Information
+
+<CardGroup cols={3}>
+<Card title="Mintlify CLI" icon="terminal">
+4.0.500 (stable version for Windows)
+</Card>
+<Card title="Node.js" icon="node-js">
+18+ required
+</Card>
+<Card title="npm" icon="npm">
+Latest stable version recommended
+</Card>
+</CardGroup>
+
+## Quick Commands Reference
+
+<CodeGroup>
+```bash Start development server
+npm run dev
+```
+
+```bash Build for production
+npm run build
+```
+
+```bash Preview without opening browser
+npm run preview
+```
+
+```bash Check Mintlify version
+npx @mintlify/cli --version
+```
+
+```bash Clear cache and reinstall
+rm -rf node_modules package-lock.json && npm install
+```
+</CodeGroup>
