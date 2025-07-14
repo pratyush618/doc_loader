@@ -5,7 +5,7 @@ from datetime import datetime
 
 from ..core.config import settings
 from ..core.exceptions import FileSizeException
-from ..utils.temp_file_manager import get_temp_file_manager
+from ..utils.file_manager import get_temp_file_manager
 
 
 class StorageService:
