@@ -1,7 +1,7 @@
 from enum import Enum
-from datetime import datetime
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, field_validator
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 
 class JobStatus(str, Enum):
@@ -54,8 +54,8 @@ class Job(BaseModel):
     result_path: Optional[str] = None
     error_message: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     
     class Config:

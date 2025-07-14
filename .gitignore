@@ -110,7 +110,6 @@ ENV/
 env.bak/
 venv.bak/
 .venv/
-uv.lock
 
 # Spyder project settings
 .spyderproject
@@ -151,5 +150,7 @@ dmypy.json
 
 # Local development files
 .env.local
-test_*.py
 temp_*
+
+node_modules/
+*claude*
