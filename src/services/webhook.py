@@ -1,5 +1,5 @@
 import httpx
-from typing import Optional, Dict, Any
+from typing import Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from ..core.config import settings
