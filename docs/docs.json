@@ -1,44 +1,43 @@
 {
   "name": "Document Converter API",
+  "theme": "aspen",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
-    "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
-    }
+    "primary": "#2563eb",
+    "light": "#3b82f6",
+    "dark": "#1d4ed8"
   },
   "topbarLinks": [
     {
       "name": "GitHub",
-      "url": "https://github.com/example/doc-converter"
+      "url": "https://github.com/pratyush618/doc_loader"
     }
   ],
   "topbarCtaButton": {
     "name": "Get Started",
-    "url": "/quickstart"
+    "url": "/quickstart",
+    "style": "roundedFull"
   },
-  "tabs": [
-    {
-      "name": "API Reference",
-      "url": "api-reference"
-    },
-    {
-      "name": "Examples",
-      "url": "examples"
-    }
-  ],
+  "search": {
+    "prompt": "Search documentation..."
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
+  "primaryTab": {
+    "name": "Documentation"
+  },
   "anchors": [
     {
       "name": "GitHub",
       "icon": "github",
-      "url": "https://github.com/example/doc-converter"
+      "url": "https://github.com/pratyush618/doc_loader"
     },
     {
       "name": "Community",
@@ -46,56 +45,81 @@
       "url": "https://discord.gg/example"
     }
   ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "introduction", 
-        "quickstart", 
-        "setup"
-      ]
-    },
-    {
-      "group": "Core Features",
-      "pages": [
-        "features/conversion",
-        "features/ocr",
-        "features/output-formats",
-        "features/webhooks"
-      ]
-    },
-    {
-      "group": "Configuration",
-      "pages": [
-        "configuration/environment"
-      ]
-    },
-    {
-      "group": "API Documentation",
-      "pages": [
-        "api-reference/introduction",
-        "api-reference/jobs",
-        "api-reference/health",
-        "api-reference/errors"
-      ]
-    },
-    {
-      "group": "Examples",
-      "pages": [
-        "examples/basic-conversion"
-      ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        "development",
-        "deployment",
-        "troubleshooting"
-      ]
-    }
-  ],
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              "quickstart",
+              "setup"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "icon": "sparkles",
+            "pages": [
+              "features/conversion",
+              "features/ocr",
+              "features/output-formats",
+              "features/webhooks"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "icon": "cog",
+            "pages": [
+              "configuration/environment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "icon": "square-terminal",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "icon": "api",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/jobs",
+              "api-reference/health",
+              "api-reference/errors"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Guides",
+            "icon": "book",
+            "pages": [
+              "development",
+              "deployment",
+              "troubleshooting"
+            ]
+          },
+          {
+            "group": "Examples",
+            "icon": "lightbulb",
+            "pages": [
+              "examples/basic-conversion"
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "footerSocials": {
-    "github": "https://github.com/example/doc-converter",
+    "github": "https://github.com/pratyush618/doc_loader",
     "discord": "https://discord.gg/example"
   }
 }

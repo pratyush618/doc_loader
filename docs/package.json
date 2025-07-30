@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Documentation for the Document Converter API",
   "scripts": {
-    "dev": "npx @mintlify/cli dev",
-    "build": "npx @mintlify/cli build",
-    "preview": "npx @mintlify/cli dev --no-open",
-    "start": "npx @mintlify/cli dev --no-open"
+    "dev": "npx mintlify dev",
+    "build": "npx mintlify build",
+    "preview": "npx mintlify dev --no-open",
+    "start": "npx mintlify dev --no-open"
   },
   "keywords": [
     "documentation",
@@ -17,6 +17,6 @@
   "author": "Document Converter Team",
   "license": "MIT",
   "devDependencies": {
-    "@mintlify/cli": "^4.0.500"
+    "mintlify": "^4.2.36"
   }
 }
